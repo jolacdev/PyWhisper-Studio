@@ -1,11 +1,13 @@
 import os
+from collections.abc import Iterable
 from typing import TypedDict
 
 import torch
-import whisper
+from faster_whisper import WhisperModel
+from faster_whisper.transcribe import Segment
 
 
-class Segment(TypedDict):
+class TranscriptionSegment(TypedDict):
     """
     Represents a single segment of the transcription.
 
@@ -20,12 +22,6 @@ class Segment(TypedDict):
     text: str
     start: float
     end: float
-
-
-class TranscriptionResult(TypedDict):
-    text: str
-    segments: list[dict]
-    language: str
 
 
 class WhisperModelService:
@@ -58,14 +54,12 @@ class WhisperModelService:
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self._model = whisper.load_model(model_name, device=device, download_root="models")
+        print(f"Loading model '{model_name}' on {device}.")  # TODO: Remove debug print
+        self._model = WhisperModel(model_name, device=device, download_root="models")
         self._current_model_name = model_name
         print(f"Model '{model_name}' loaded on {device} successfully.")  # TODO: Remove debug print
 
-    def transcribe(
-        self,
-        file_path: str,
-    ) -> TranscriptionResult:
+    def transcribe(self, file_path: str):  # noqa: ANN201
         """
         Transcribes the given media file using the loaded model.
 
@@ -73,11 +67,11 @@ class WhisperModelService:
             file_path (str): The path to the media file (audio or video).
 
         Returns:
-            TranscriptionResult: The raw transcription result containing text and segments.
+            result (Tuple[Iterable[Segment], TranscriptionInfo]): The raw transcription result
+            with segments and information.
 
         Raises:
-            RuntimeError: If the model has not been loaded.
-            FileNotFoundError: If the audio file does not exist.
+            FileNotFoundError: If the file does not exist.
         """
         if self._model is None:
             self.load_model()  # Auto-load default if not loaded
@@ -86,6 +80,7 @@ class WhisperModelService:
         if not os.path.exists(file_path) and not file_path.startswith("http"):
             raise FileNotFoundError(f"File not found: {file_path}")
 
+        print("Transcribing file:", file_path)  # TODO: Remove debug print
         return self._model.transcribe(file_path)
 
 
@@ -93,7 +88,7 @@ class WhisperModelService:
 _whisper_service = WhisperModelService()
 
 
-def transcribe_media_file(media_path: str, model_name: str = "base") -> TranscriptionResult:
+def transcribe_file(media_path: str, model_name: str = "base"):  # noqa: ANN201
     """
     Transcribes audio from a media file (audio or video) using the Whisper model.
 
@@ -105,21 +100,17 @@ def transcribe_media_file(media_path: str, model_name: str = "base") -> Transcri
         model_name (str): Name of the Whisper model to use. Defaults to "base".
 
     Returns:
-        TranscriptionResult: The transcription result containing text, segments, and language.
+            result (Tuple[Iterable[Segment], TranscriptionInfo]): The raw transcription result
+            with segments and information.
     """
     _whisper_service.load_model(model_name)
     return _whisper_service.transcribe(media_path)
 
 
-def extract_segments(transcription_result: TranscriptionResult) -> list[Segment]:
+def format_segments(raw_segments: Iterable[Segment]) -> list[TranscriptionSegment]:
     """Converts raw Whisper results into typed Segment objects."""
-    segments: list[Segment] = []
-    for raw_segment in transcription_result["segments"]:
-        segment: Segment = {
-            "id": int(raw_segment["id"] + 1),
-            "start": float(raw_segment["start"]),
-            "end": float(raw_segment["end"]),
-            "text": str(raw_segment["text"]).strip(),
-        }
+    segments: list[TranscriptionSegment] = []
+    for s in raw_segments:
+        segment: TranscriptionSegment = {"id": s.id, "start": s.start, "end": s.end, "text": s.text.strip()}
         segments.append(segment)
     return segments

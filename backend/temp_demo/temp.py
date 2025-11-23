@@ -1,7 +1,7 @@
 from time import time
 
 from utils.time_utils import format_seconds_to_srt_time as secs_to_srt
-from utils.whisper import extract_segments, transcribe_media_file
+from utils.whisper import format_segments, transcribe_file
 
 
 # TODO: Temporary demo function to remove.
@@ -14,14 +14,14 @@ def demo_whisper_transcription() -> None:
         print(f"Starting transcription of: {audio_url}")
 
         start_time_ms = time() * 1000
-        result = transcribe_media_file(audio_url, model_name="base")
-        transcription_segments = extract_segments(result)
+        raw_segments, info = transcribe_file(audio_url, model_name="base")
+        print(f"Transcription Result:\nSegments: {raw_segments}\n\nInfo: {info}")  # TODO: Remove debug print
         end_time_ms = time() * 1000
 
-        language = result.get("language", "en")
-        print(f"Language: {language}\nTotal segments: {len(transcription_segments)}\n")
+        segments = format_segments(raw_segments)
+        print(f"Language: {info.language}\nTotal segments: {len(segments)}\n")
 
-        for s in transcription_segments:
+        for s in segments:
             print(f"{s['id']}\n{secs_to_srt(s['start'])} --> {secs_to_srt(s['end'])}\n{s['text']}\n")
 
         processing_time_seconds = (end_time_ms - start_time_ms) / 1000
