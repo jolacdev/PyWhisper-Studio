@@ -36,10 +36,8 @@ class PyWebViewApi:
     # TODO: Online audio example: https://keithito.com/LJ-Speech-Dataset/LJ037-0171.wav
     def run_transcription(self, file_path: str) -> list[TranscriptionSegment]:
         try:
-            print(f"Starting transcription of: {file_path}")
-
             raw_segments, info = transcribe_file(file_path, model_name="base")
-            print(f"nfo: {info}\n")
+            print(f"Info: {info}\nStarting transcription of: {file_path}")
 
             start_time_ms = time() * 1000
             segments = format_segments(raw_segments)
@@ -50,7 +48,7 @@ class PyWebViewApi:
 
             elapsed_seconds = (end_time_ms - start_time_ms) / 1000
             print(f"\n{'=' * 80}")
-            print(f"✓ Transcripted {len(segments)} segments in in {elapsed_seconds:.2f} seconds.")
+            print(f"✓ Transcribed {len(segments)} segments in in {elapsed_seconds:.2f} seconds.")
             print(f"\n{'=' * 80}")
 
             return segments
