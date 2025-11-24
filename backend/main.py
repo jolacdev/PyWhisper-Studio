@@ -4,7 +4,6 @@ import webview
 
 from api.api import PyWebViewApi
 from helpers.webview_helpers import get_frontend_entrypoint, is_running_bundled
-from temp_demo.temp import demo_whisper_transcription
 
 if __name__ == "__main__":
     frontend_entrypoint = get_frontend_entrypoint(os.path.dirname(__file__))
@@ -13,4 +12,4 @@ if __name__ == "__main__":
     )
 
     is_devtools_enabled = not is_running_bundled()
-    webview.start(demo_whisper_transcription, debug=is_devtools_enabled)
+    webview.start(debug=is_devtools_enabled)
