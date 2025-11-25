@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 
-import Loader from './components/Loader/Loader';
+import Loader from './components/atoms/Loader/Loader';
 import { createPyWebViewMock } from './mocks/mockPyWebView';
 
 type PyWebViewProviderProps = {

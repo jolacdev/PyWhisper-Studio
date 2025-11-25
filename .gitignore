@@ -33,3 +33,6 @@ dist
 
 # Temporary Directories
 temp/
+
+# AI Models
+models/
