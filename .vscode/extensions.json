@@ -3,6 +3,7 @@
     // ===== [Project Recommended Extensions] =====
     // 🐍 Python
     "ms-python.python",
+    "ms-python.mypy-type-checker",
     "charliermarsh.ruff",
     "tamasfe.even-better-toml",
 
