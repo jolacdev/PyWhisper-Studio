@@ -7,7 +7,7 @@ def is_running_bundled() -> bool:
     return getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS")
 
 
-def get_frontend_entrypoint(backend_dir_path: str):
+def get_frontend_entrypoint(backend_dir_path: str) -> str:
     """Return the frontend entrypoint depending on context."""
 
     live_server = os.getenv("LIVE_SERVER", "0") == "1"

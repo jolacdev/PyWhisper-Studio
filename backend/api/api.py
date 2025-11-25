@@ -4,9 +4,9 @@ from typing import Optional
 import webview
 from pyflow import extensity  # type: ignore
 
-from constants.media_types import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
-from utils.time_utils import format_seconds_to_srt_time as secs_to_srt
-from utils.whisper import TranscriptionSegment, format_segments, transcribe_file
+from constants.media_types import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS  # type: ignore
+from utils.time_utils import format_seconds_to_srt_time as secs_to_srt  # type: ignore
+from utils.whisper import TranscriptionSegment, format_segments, transcribe_file  # type: ignore
 
 # NOTE: Prefer using Union/Optional over `|` to support PyFlow-TS proper type generation.
 # https://github.com/ExtensityAI/PyFlow.ts?tab=readme-ov-file#custom-type-mappings
@@ -27,7 +27,7 @@ class PyWebViewApi:
                 webview.FileDialog.OPEN, allow_multiple=False, file_types=file_types
             )
         ):
-            return
+            return None
 
         filename = str(result) if not isinstance(result, (tuple, list)) else str(result[0])
         return filename
@@ -59,3 +59,5 @@ class PyWebViewApi:
             print(f"✗ Error: Network connection failed - {e}")
         except Exception as e:
             print(f"✗ Error during transcription: {type(e).__name__}: {e}")
+
+        return []
