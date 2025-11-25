@@ -36,7 +36,12 @@ class PyWebViewApi:
     # TODO: Online audio example: https://keithito.com/LJ-Speech-Dataset/LJ037-0171.wav
     def run_transcription(self, file_path: str) -> list[TranscriptionSegment]:
         try:
-            raw_segments, info = transcribe_file(file_path, model_name="base")
+            if (transcription_result := transcribe_file(file_path, model_name="base")) is None:
+                raise ValueError("Transcription result returned `None`")
+
+            raw_segments, info = transcription_result
+
+            print(f"test: {raw_segments} ---- {info}")
             print(f"Info: {info}\nStarting transcription of: {file_path}")
 
             start_time_ms = time() * 1000
