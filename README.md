@@ -1,6 +1,6 @@
 <div align="center">
-  <h1>Whisper GUI</h1>
-  <p>A desktop GUI implementation of <strong>OpenAI Whisper</strong> using a Python backend and React frontend.</p>
+  <h1>PyWhisper Studio</h1>
+  <p>A desktop GUI implementation of <strong>Faster Whisper</strong> using a Python backend and React frontend.</p>
 </div>
 
 ---

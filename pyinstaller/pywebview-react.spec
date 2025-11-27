@@ -58,7 +58,7 @@ def get_icon_name() -> Literal["logo.ico", "logo.icns", "NONE"]:
 is_windows = sys.platform == "win32"
 is_macos = sys.platform == "darwin"
 
-application_name = "Whisper GUI"
+application_name = "PyWhisper Studio"
 common_kwargs = dict(
     name=application_name,  # Bundled app name
     debug=False,  # If `True`, shows bootloader debug messages during startup. Recommended to disable for production.
