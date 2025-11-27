@@ -18,7 +18,12 @@
     "strict": true,
     "noUnusedLocals": false, // Disabled to prevent TS from blocking compilation for unused vars/imports. Handled by ESLint `@typescript-eslint/no-unused-vars`.
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    // NOTE: Type checking & IDE autocomplete.
+    "paths": {
+      "@components/*": ["./src/shared/components/*"]
+    }
   },
   "include": [
     "src",
