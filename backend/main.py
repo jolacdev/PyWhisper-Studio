@@ -6,6 +6,7 @@ import webview
 
 from api.api import PyWebViewApi
 from constants import APP_NAME, ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
+from helpers.drag_drop_handler import bind_drag_drop_events
 from helpers.logging_helpers import setup_logging
 from helpers.webview_helpers import get_frontend_entrypoint, is_running_bundled
 
@@ -31,4 +32,5 @@ if __name__ == "__main__":
         title=APP_NAME, url=frontend_entrypoint, js_api=PyWebViewApi(), width=950, height=700
     )
 
-    webview.start(debug=is_devtools_enabled)
+    is_devtools_enabled = not is_running_bundled()
+    webview.start(bind_drag_drop_events, args=(window,), debug=is_devtools_enabled)
