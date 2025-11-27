@@ -7,8 +7,10 @@
     "preinstall": "npx only-allow pnpm",
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint --fix",
-    "lint:no-fix": "eslint",
+    "tscheck": "tsc --noEmit",
+    "lint": "pnpm tscheck && eslint --fix",
+    "lint:errors": "pnpm tscheck && eslint --fix --quiet",
+    "lint:no-fix": "pnpm tscheck && eslint",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:gui": "vitest --ui"
