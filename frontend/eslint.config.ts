@@ -206,6 +206,11 @@ export default [
           // Natural order. Example: 'item2' < 'item10'.
           type: 'natural',
 
+          // NOTE: Added to support marking aliased imports as internal.
+          tsconfig: {
+            rootDir: '.',
+          },
+
           // NOTE: Default values explicitly set for clarity.
           newlinesBetween: 'always',
           order: 'asc',
