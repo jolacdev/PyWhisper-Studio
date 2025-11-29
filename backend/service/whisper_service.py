@@ -38,7 +38,11 @@ class WhisperModelService:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         logger.info("Loading model '%s' on %s.", model_name, device)
-        self._model = WhisperModel(model_name, device=device, download_root="models")
+        self._model = WhisperModel(
+            model_name,
+            device=device,
+            # download_root="models",
+        )
         self._current_model_name = model_name
         logger.info("Model '%s' loaded on %s successfully.", model_name, device)
 

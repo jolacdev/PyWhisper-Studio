@@ -1,22 +1,31 @@
 import logging
+import multiprocessing
 import os
 
 import webview
+from backend.helpers.logging_helpers import setup_logging
 
 from api.api import PyWebViewApi
 from constants.logging import ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
-from helpers.logging_config import setup_logging
 from helpers.webview_helpers import get_frontend_entrypoint, is_running_bundled
+
+APP_NAME = "PyWhisper Studio"
 
 if __name__ == "__main__":
     is_bundled = is_running_bundled()
+
+    if is_bundled:
+        # NOTE: Avoid creating a new window for multiprocessing tasks.
+        multiprocessing.freeze_support()
+
     should_log = not is_bundled or ENABLE_BUNDLED_LOGGING
     is_devtools_enabled = not is_bundled
 
     setup_logging(
+        app_name=APP_NAME,
+        filename=LOGGING_FILENAME,
         enable_logging=should_log,
         log_level=logging.INFO if is_bundled else logging.DEBUG,
-        filename=LOGGING_FILENAME,
     )
 
     frontend_entrypoint = get_frontend_entrypoint(os.path.dirname(__file__))

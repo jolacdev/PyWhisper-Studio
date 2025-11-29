@@ -1,10 +1,13 @@
 import logging
+import os
+import sys
 from logging.handlers import RotatingFileHandler
 
 
 def setup_logging(
-    enable_logging: bool = True,
+    app_name: str,
     filename: str = "app.log",
+    enable_logging: bool = True,
     log_level: int = logging.DEBUG,
     max_bytes: int = 5 * 1024 * 1024,  # 5 MB
 ) -> None:
@@ -29,7 +32,9 @@ def setup_logging(
     )
 
     # Rotating file handler
-    file_handler = RotatingFileHandler(filename, maxBytes=max_bytes, backupCount=1, encoding="utf-8")
+    file_handler = RotatingFileHandler(
+        get_log_dir(app_name), filename, maxBytes=max_bytes, backupCount=1, encoding="utf-8"
+    )
     file_handler.setLevel(log_level)
     file_handler.setFormatter(formatter)
 
@@ -40,3 +45,15 @@ def setup_logging(
 
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+
+
+def get_log_dir(app_name: str) -> str:
+    if sys.platform.startswith("darwin"):
+        # /Users/username/Library/Logs/AppName
+        return os.path.join(os.path.expanduser("~"), "Library", "Logs", app_name)
+
+    if sys.platform.startswith("win32"):
+        # C:\Users\username\AppData\Local\AppName\Logs
+        return os.path.join(os.environ.get("LOCALAPPDATA", ""), app_name, "Logs")
+
+    raise RuntimeError("Unsupported platform: only macOS and Windows are supported")
