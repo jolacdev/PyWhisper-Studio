@@ -36,3 +36,6 @@ temp/
 
 # AI Models
 models/
+
+# Log files
+*.log

@@ -1,0 +1,2 @@
+ENABLE_BUNDLED_LOGGING = False
+LOGGING_FILENAME = "whisper.log"

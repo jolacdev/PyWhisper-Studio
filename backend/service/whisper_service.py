@@ -1,7 +1,10 @@
+import logging
 import os
 
 import torch
 from faster_whisper import WhisperModel  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 
 class WhisperModelService:
@@ -34,10 +37,10 @@ class WhisperModelService:
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        print(f"Loading model '{model_name}' on {device}.")  # TODO: Remove debug print
+        logger.info("Loading model '%s' on %s.", model_name, device)
         self._model = WhisperModel(model_name, device=device, download_root="models")
         self._current_model_name = model_name
-        print(f"Model '{model_name}' loaded on {device} successfully.")  # TODO: Remove debug print
+        logger.info("Model '%s' loaded on %s successfully.", model_name, device)
 
     def transcribe(self, file_path: str):  # noqa: ANN201
         """
@@ -60,7 +63,6 @@ class WhisperModelService:
         if not os.path.exists(file_path) and not file_path.startswith("http"):
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        print("Transcribing file:", file_path)  # TODO: Remove debug print
         if self._model is not None:
             return self._model.transcribe(file_path)
 

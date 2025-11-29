@@ -1,3 +1,4 @@
+import logging
 from time import time
 from typing import Optional
 
@@ -10,6 +11,8 @@ from utils.whisper import TranscriptionSegment, format_segments, transcribe_file
 
 # NOTE: Prefer using Union/Optional over `|` to support PyFlow-TS proper type generation.
 # https://github.com/ExtensityAI/PyFlow.ts?tab=readme-ov-file#custom-type-mappings
+
+logger = logging.getLogger(__name__)
 
 
 @extensity
@@ -41,28 +44,32 @@ class PyWebViewApi:
 
             raw_segments, info = transcription_result
 
-            print(f"test: {raw_segments} ---- {info}")
-            print(f"Info: {info}\nStarting transcription of: {file_path}")
+            logger.debug("Transcription info: %s", info)
+            logger.info("Starting transcription of: %s", file_path)
 
             start_time_ms = time() * 1000
             segments = format_segments(raw_segments)
             end_time_ms = time() * 1000
 
             for s in segments:
-                print(f"{s['id']}\n{secs_to_srt(s['start'])} --> {secs_to_srt(s['end'])}\n{s['text']}\n")
+                logger.debug(
+                    "\n%s\n%s --> %s\n%s\n",
+                    s["id"],
+                    secs_to_srt(s["start"]),
+                    secs_to_srt(s["end"]),
+                    s["text"],
+                )
 
             elapsed_seconds = (end_time_ms - start_time_ms) / 1000
-            print(f"\n{'=' * 80}")
-            print(f"✓ Transcribed {len(segments)} segments in in {elapsed_seconds:.2f} seconds.")
-            print(f"\n{'=' * 80}")
+            logger.info("Transcribed %d segments in in %.2f seconds.", len(segments), elapsed_seconds)
 
             return segments
 
-        except FileNotFoundError as e:
-            print(f"✗ Error: File not found - {e}")
-        except ConnectionError as e:
-            print(f"✗ Error: Network connection failed - {e}")
-        except Exception as e:
-            print(f"✗ Error during transcription: {type(e).__name__}: {e}")
+        except FileNotFoundError:
+            logger.exception("File not found.")
+        except ConnectionError:
+            logger.exception("Network connection failed.")
+        except Exception:
+            logger.exception("Error during transcription.")
 
         return []
