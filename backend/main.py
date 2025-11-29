@@ -3,10 +3,10 @@ import multiprocessing
 import os
 
 import webview
-from backend.helpers.logging_helpers import setup_logging
 
 from api.api import PyWebViewApi
 from constants.logging import ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
+from helpers.logging_helpers import setup_logging
 from helpers.webview_helpers import get_frontend_entrypoint, is_running_bundled
 
 APP_NAME = "PyWhisper Studio"

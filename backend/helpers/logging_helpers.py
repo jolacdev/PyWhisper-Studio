@@ -32,9 +32,9 @@ def setup_logging(
     )
 
     # Rotating file handler
-    file_handler = RotatingFileHandler(
-        get_log_dir(app_name), filename, maxBytes=max_bytes, backupCount=1, encoding="utf-8"
-    )
+    log_path = os.path.join(get_log_dir(app_name), filename)
+    logging.info("log path %s", log_path)
+    file_handler = RotatingFileHandler(log_path, maxBytes=max_bytes, backupCount=1, encoding="utf-8")
     file_handler.setLevel(log_level)
     file_handler.setFormatter(formatter)
 
