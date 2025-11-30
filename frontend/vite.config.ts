@@ -21,6 +21,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@components': path.resolve(__dirname, './src/shared/components'),
+      '@features': path.resolve(__dirname, './src/features'),
+      '@hooks': path.resolve(__dirname, './src/shared/hooks'),
+      '@icons': path.resolve(__dirname, './src/shared/icons'),
     },
   },
   server: {

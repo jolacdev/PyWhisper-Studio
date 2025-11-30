@@ -22,7 +22,10 @@
 
     // NOTE: Type checking & IDE autocomplete.
     "paths": {
-      "@components/*": ["./src/shared/components/*"]
+      "@components/*": ["./src/shared/components/*"],
+      "@features/*": ["./src/features/*"],
+      "@hooks/*": ["./src/shared/hooks/*"],
+      "@icons/*": ["./src/shared/icons/*"]
     }
   },
   "include": [

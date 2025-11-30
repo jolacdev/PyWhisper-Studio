@@ -7,9 +7,10 @@ import webview
 from pyflow import extensity
 
 from constants import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+from schemas.transcription import TranscriptionSegment
 from service.whisper_service import whisper_service
 from utils.time_utils import format_seconds_to_srt_time as secs_to_srt
-from utils.whisper_utils import TranscriptionSegment, format_segments
+from utils.whisper_utils import format_segments
 
 # NOTE: Prefer using Union/Optional over `|` to support PyFlow-TS proper type generation.
 # https://github.com/ExtensityAI/PyFlow.ts?tab=readme-ov-file#custom-type-mappings
