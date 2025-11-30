@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     frontend_entrypoint = get_frontend_entrypoint(os.path.dirname(__file__))
     window = webview.create_window(
-        title="PyWhisper Studio", url=frontend_entrypoint, js_api=PyWebViewApi(), width=950, height=700
+        title=APP_NAME, url=frontend_entrypoint, js_api=PyWebViewApi(), width=950, height=700
     )
 
     webview.start(debug=is_devtools_enabled)
