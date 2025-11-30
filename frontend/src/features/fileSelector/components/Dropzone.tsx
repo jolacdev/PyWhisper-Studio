@@ -1,9 +1,9 @@
 import cx from 'classnames';
 import { DragEvent, useEffect, useState } from 'react';
 
-import usePyWebViewState from '../../shared/hooks/usePyWebViewState';
-import useAppStore from '../../store/useAppStore';
-import { Upload } from '../icons/Upload';
+import usePyWebViewState from '@hooks/usePyWebViewState';
+import { Upload } from '@icons/Upload';
+import useAppStore from 'store/useAppStore';
 
 const Dropzone = () => {
   const [isDragging, setIsDragging] = useState(false);

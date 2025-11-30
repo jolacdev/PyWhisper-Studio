@@ -25,7 +25,9 @@
       "@components/*": ["./src/shared/components/*"],
       "@features/*": ["./src/features/*"],
       "@hooks/*": ["./src/shared/hooks/*"],
-      "@icons/*": ["./src/shared/icons/*"]
+      "@icons/*": ["./src/shared/icons/*"],
+      "store/*": ["./src/store/*"],
+      "types/*": ["./src/types/*"]
     }
   },
   "include": [

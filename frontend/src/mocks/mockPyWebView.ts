@@ -1,8 +1,8 @@
 import {
   PyWebViewApi,
   TranscriptionSegment,
-} from '../types/pywebview/pywebview-api';
-import { PyWebViewState } from '../types/pywebview/pywebview-state';
+} from 'types/pywebview/pywebview-api';
+import { PyWebViewState } from 'types/pywebview/pywebview-state';
 
 const mockState: PyWebViewState = {
   addEventListener: () => {},

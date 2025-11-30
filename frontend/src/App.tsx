@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Dropzone from './components/molecules/Dropzone';
-import TranscribeButton from './components/molecules/TranscribeButton';
+import Dropzone from '@features/fileSelector/components/Dropzone';
+import TranscribeButton from '@features/transcription/components/TranscribeButton';
 
 const App = () => {
   const { t } = useTranslation();
