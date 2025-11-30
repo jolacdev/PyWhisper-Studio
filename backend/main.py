@@ -5,8 +5,7 @@ import os
 import webview
 
 from api.api import PyWebViewApi
-from constants.app import APP_NAME
-from constants.logging import ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
+from constants import APP_NAME, ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
 from helpers.logging_helpers import setup_logging
 from helpers.webview_helpers import get_frontend_entrypoint, is_running_bundled
 

@@ -14,7 +14,7 @@ const App = () => {
   };
 
   const handleRunTranscription = async (path: string) => {
-    const segments = await window.pywebview.api.run_transcription(path);
+    const segments = await window.pywebview.api.run_transcription(path, 'base'); // TODO: Remove hardcoded code
     console.log({ segments }); // TODO: Remove
   };
 

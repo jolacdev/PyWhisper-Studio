@@ -5,7 +5,7 @@ import torch
 from faster_whisper import WhisperModel
 from platformdirs import user_data_dir
 
-from constants.app import APP_NAME, MODELS_DIR
+from constants import APP_NAME, MODELS_DIR
 
 logger = logging.getLogger(__name__)
 

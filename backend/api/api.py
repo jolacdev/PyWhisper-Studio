@@ -6,7 +6,7 @@ import faster_whisper
 import webview
 from pyflow import extensity
 
-from constants.media_types import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+from constants import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 from service.whisper_service import whisper_service
 from utils.time_utils import format_seconds_to_srt_time as secs_to_srt
 from utils.whisper import TranscriptionSegment, format_segments

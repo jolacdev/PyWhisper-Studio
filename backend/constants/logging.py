@@ -1,2 +1,0 @@
-ENABLE_BUNDLED_LOGGING = True
-LOGGING_FILENAME = "whisper.log"
