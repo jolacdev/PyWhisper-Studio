@@ -1,10 +1,14 @@
 import logging
+import os
 from logging.handlers import RotatingFileHandler
+
+from platformdirs import user_log_dir
 
 
 def setup_logging(
-    enable_logging: bool = True,
+    app_name: str,
     filename: str = "app.log",
+    enable_logging: bool = True,
     log_level: int = logging.DEBUG,
     max_bytes: int = 5 * 1024 * 1024,  # 5 MB
 ) -> None:
@@ -28,8 +32,15 @@ def setup_logging(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
+    # Log Absolute Path
+    log_dir = user_log_dir(app_name)
+    log_file_path = os.path.join(log_dir, filename)
+
+    # Ensure log directory exists
+    os.makedirs(log_dir, exist_ok=True)
+
     # Rotating file handler
-    file_handler = RotatingFileHandler(filename, maxBytes=max_bytes, backupCount=1, encoding="utf-8")
+    file_handler = RotatingFileHandler(log_file_path, maxBytes=max_bytes, backupCount=1, encoding="utf-8")
     file_handler.setLevel(log_level)
     file_handler.setFormatter(formatter)
 
