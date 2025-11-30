@@ -1,4 +1,5 @@
 import logging
+import multiprocessing
 import os
 
 import webview
@@ -9,6 +10,11 @@ from helpers.webview_helpers import get_frontend_entrypoint, is_running_bundled
 
 if __name__ == "__main__":
     is_bundled = is_running_bundled()
+
+    if is_bundled:
+        # NOTE: Avoid creating new windows for multiprocessing tasks if running bundled.
+        multiprocessing.freeze_support()
+
     should_log = not is_bundled or ENABLE_BUNDLED_LOGGING
     is_devtools_enabled = not is_bundled
 
