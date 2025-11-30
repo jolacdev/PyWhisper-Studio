@@ -4,8 +4,7 @@ import os
 import webview
 
 from api.api import PyWebViewApi
-from constants.logging import ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
-from helpers.logging_config import setup_logging
+from constants import ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
 from helpers.webview_helpers import get_frontend_entrypoint, is_running_bundled
 
 if __name__ == "__main__":

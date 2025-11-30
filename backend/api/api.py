@@ -4,7 +4,7 @@ from typing import Optional
 
 import webview
 from pyflow import extensity
-from constants.media_types import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+from constants import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
 from utils.time_utils import format_seconds_to_srt_time as secs_to_srt
 from utils.whisper import TranscriptionSegment, format_segments, transcribe_file
 
