@@ -18,7 +18,7 @@ export declare class PyWebViewApi {
     private _instanceId?;
     constructor(args?: Partial<PyWebViewApi>);
     open_file_dialog(): Promise<string | null>;
-    run_transcription(file_path: string): Promise<TranscriptionSegment[]>;
+    run_transcription(file_path: string, model_name: string): Promise<TranscriptionSegment[]>;
     static createInstance(args?: Partial<PyWebViewApi>): Promise<PyWebViewApi>;
 }
 export type PyWebViewApiType = PyWebViewApi;

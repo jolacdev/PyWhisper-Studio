@@ -1,7 +1,12 @@
+import logging
 import os
 
-import torch
-from faster_whisper import WhisperModel  # type: ignore
+from faster_whisper import WhisperModel
+from platformdirs import user_data_dir
+
+from constants import APP_NAME, MODELS_DIR
+
+logger = logging.getLogger(__name__)
 
 
 class WhisperModelService:
@@ -16,35 +21,31 @@ class WhisperModelService:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def load_model(self, model_name: str = "base", device: str | None = None) -> None:
+    def _load_model(self, model_name: str) -> None:
         """
         Loads the Whisper model if it's not already loaded or if the model name changes.
 
         Args:
             model_name (str): The name of the model to load (e.g., "base", "small", "medium").
-                              Defaults to "base".
-            device (str | None): The device to load the model on ("cpu" or "cuda").
-                                 If None, it automatically detects available device.
         """
-        # If the model is already loaded and the model name is the same, return
-        if self._model is not None and self._current_model_name == model_name:
-            return
 
-        # If no device is specified, automatically detect available device
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
+        models_dir = os.path.join(user_data_dir(APP_NAME), MODELS_DIR)
+        os.makedirs(models_dir, exist_ok=True)
 
-        print(f"Loading model '{model_name}' on {device}.")  # TODO: Remove debug print
-        self._model = WhisperModel(model_name, device=device, download_root="models")
+        logger.info("Loading model '%s'.", model_name)
+        self._model = WhisperModel(model_name, download_root=models_dir)
         self._current_model_name = model_name
-        print(f"Model '{model_name}' loaded on {device} successfully.")  # TODO: Remove debug print
+        logger.info("Model '%s' loaded from '%s' successfully.", model_name, models_dir)
 
-    def transcribe(self, file_path: str):  # noqa: ANN201
+    def transcribe(self, file_path: str, model_name: str):  # noqa: ANN201
         """
-        Transcribes the given media file using the loaded model.
+        Transcribes the given media file.
+
+        Also loads the model if it's not already loaded or if the model name changes.
 
         Args:
             file_path (str): The path to the media file (audio or video).
+            model_name (str): The name of the model to load (e.g., "base", "small", "medium").
 
         Returns:
             result (Tuple[Iterable[Segment], TranscriptionInfo]): tuple containing
@@ -53,14 +54,19 @@ class WhisperModelService:
         Raises:
             FileNotFoundError: If the file does not exist.
         """
-        if self._model is None:
-            self.load_model()  # Auto-load default if not loaded
+
+        # If no model name is specified, use the default model
+        if not model_name:
+            model_name = "base"
+
+        # If the model is not loaded or the model name is different, load the model
+        if self._model is None or self._current_model_name != model_name:
+            self._load_model(model_name)
 
         # TODO: Check if should remove URL
         if not os.path.exists(file_path) and not file_path.startswith("http"):
             raise FileNotFoundError(f"File not found: {file_path}")
 
-        print("Transcribing file:", file_path)  # TODO: Remove debug print
         if self._model is not None:
             return self._model.transcribe(file_path)
 

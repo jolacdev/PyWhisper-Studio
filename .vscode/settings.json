@@ -29,6 +29,15 @@
     }
   },
 
+  // Project-specific: treat 'backend' as root so imports omit 'backend.' prefix
+  "python.analysis.extraPaths": ["backend"],
+  "python.analysis.autoImportCompletions": true,
+
+  // Project-specific: specify MyPy config file
+  "mypy-type-checker.args": [
+    "--config-file=${workspaceFolder}/backend/pyproject.toml"
+  ],
+
   // ===== [Personal Settings] =====
   "workbench.editor.wrapTabs": true,
   "editor.mouseWheelZoom": true,
