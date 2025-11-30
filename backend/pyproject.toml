@@ -34,3 +34,7 @@ explicit-preview-rules = true
 # NOTE: Allow Union/Optional to support PyFlow-TS type generation.
 "api.py" = ["UP007", "UP045"]
 # "!api.py" = ["ANN"]
+
+[tool.mypy]
+# NOTE: Disable import-untyped to allow import of untyped modules.
+disable_error_code = ["import-untyped"]
