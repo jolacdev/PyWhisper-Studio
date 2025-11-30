@@ -3,7 +3,7 @@ from typing import Any
 import webview
 from webview.dom import DOMEventHandler
 
-from constants.dropzones import AllowedDropzoneId  # type: ignore
+from constants import AllowedDropzoneId
 
 
 def on_drag(_: dict[str, Any]) -> None:

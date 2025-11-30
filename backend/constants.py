@@ -1,3 +1,5 @@
+from enum import Enum
+
 # App
 APP_NAME = "PyWhisper Studio"
 
@@ -29,3 +31,9 @@ AUDIO_EXTENSIONS = [
     "*.opus",
     "*.aiff",
 ]
+
+
+# Dropzones
+# NOTE: Inheriting from (str, Enum) allows direct string comparison. (e.g., "Value1" == SomeEnum.Value1)
+class AllowedDropzoneId(str, Enum):
+    FILE_DROPZONE = "file-dropzone"
