@@ -2,7 +2,7 @@ import logging
 import os
 
 import torch
-from faster_whisper import WhisperModel  # type: ignore
+from faster_whisper import WhisperModel
 
 logger = logging.getLogger(__name__)
 

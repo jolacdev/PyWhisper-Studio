@@ -29,6 +29,11 @@
     }
   },
 
+  // Project-specific: specify MyPy config file
+  "mypy-type-checker.args": [
+    "--config-file=${workspaceFolder}/backend/pyproject.toml"
+  ],
+
   // ===== [Personal Settings] =====
   "workbench.editor.wrapTabs": true,
   "editor.mouseWheelZoom": true,

@@ -3,11 +3,10 @@ from time import time
 from typing import Optional
 
 import webview
-from pyflow import extensity  # type: ignore
-
-from constants.media_types import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS  # type: ignore
-from utils.time_utils import format_seconds_to_srt_time as secs_to_srt  # type: ignore
-from utils.whisper import TranscriptionSegment, format_segments, transcribe_file  # type: ignore
+from pyflow import extensity
+from constants.media_types import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+from utils.time_utils import format_seconds_to_srt_time as secs_to_srt
+from utils.whisper import TranscriptionSegment, format_segments, transcribe_file
 
 # NOTE: Prefer using Union/Optional over `|` to support PyFlow-TS proper type generation.
 # https://github.com/ExtensityAI/PyFlow.ts?tab=readme-ov-file#custom-type-mappings

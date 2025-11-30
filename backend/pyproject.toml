@@ -1,3 +1,10 @@
+# MyPy
+[tool.mypy]
+# NOTE: Disable import-untyped to allow import of untyped modules.
+disable_error_code = ["import-untyped"]
+
+
+# Ruff
 [tool.ruff]
 line-length = 110
 
