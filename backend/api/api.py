@@ -2,11 +2,14 @@ import logging
 from time import time
 from typing import Optional
 
+import faster_whisper
 import webview
 from pyflow import extensity
+
 from constants import AUDIO_EXTENSIONS, VIDEO_EXTENSIONS
+from service.whisper_service import whisper_service
 from utils.time_utils import format_seconds_to_srt_time as secs_to_srt
-from utils.whisper import TranscriptionSegment, format_segments, transcribe_file
+from utils.whisper_utils import TranscriptionSegment, format_segments
 
 # NOTE: Prefer using Union/Optional over `|` to support PyFlow-TS proper type generation.
 # https://github.com/ExtensityAI/PyFlow.ts?tab=readme-ov-file#custom-type-mappings
@@ -36,9 +39,12 @@ class PyWebViewApi:
 
     # TODO: Print messages for debugging purposes, remove whe not needed.
     # TODO: Online audio example: https://keithito.com/LJ-Speech-Dataset/LJ037-0171.wav
-    def run_transcription(self, file_path: str) -> list[TranscriptionSegment]:
+    def run_transcription(self, file_path: str, model_name: str) -> list[TranscriptionSegment]:
+        if model_name not in faster_whisper.available_models():
+            raise ValueError(f"Model '{model_name}' is not available.")
+
         try:
-            if (transcription_result := transcribe_file(file_path, model_name="base")) is None:
+            if (transcription_result := whisper_service.transcribe(file_path, model_name)) is None:
                 raise ValueError("Transcription result returned `None`")
 
             raw_segments, info = transcription_result

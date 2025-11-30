@@ -12,7 +12,10 @@ const mockState: PyWebViewState = {
 
 const mockApi: PyWebViewApi = {
   open_file_dialog: (): Promise<null | string> => Promise.resolve('sample.mp3'),
-  run_transcription: (_file_path: string): Promise<TranscriptionSegment[]> => {
+  run_transcription: (
+    _file_path: string,
+    _model_name: string,
+  ): Promise<TranscriptionSegment[]> => {
     const segments: TranscriptionSegment[] = [
       {
         id: 1,
