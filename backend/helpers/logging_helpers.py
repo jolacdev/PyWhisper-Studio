@@ -33,7 +33,11 @@ def setup_logging(
     )
 
     # Log Absolute Path
-    log_file_path = os.path.join(user_log_dir(app_name), filename)
+    log_dir = user_log_dir(app_name)
+    log_file_path = os.path.join(log_dir, filename)
+
+    # Ensure log directory exists
+    os.makedirs(log_dir, exist_ok=True)
 
     # Rotating file handler
     file_handler = RotatingFileHandler(log_file_path, maxBytes=max_bytes, backupCount=1, encoding="utf-8")
