@@ -1,10 +1,5 @@
-from enum import Enum
-
 # App
 APP_NAME = "PyWhisper Studio"
-
-# Whisper
-MODELS_DIR = "models"
 
 # Logging
 ENABLE_BUNDLED_LOGGING = True
@@ -31,16 +26,3 @@ AUDIO_EXTENSIONS = [
     "*.opus",
     "*.aiff",
 ]
-
-
-# Dropzones
-# NOTE: Inheriting from (str, Enum) allows direct string comparison. (e.g., "Value1" == SomeEnum.Value1)
-# NOTE: Must match the corresponding constant in the React code.
-class AllowedDropzoneId(str, Enum):
-    TRANSCRIPTION_FILE_SELECTOR_DROPZONE_ID = "file-dropzone"
-
-
-# Transcription Progress
-# NOTE: Must match the corresponding constant in the React code.
-TRANSCRIPTION_PROGRESS_MIN_VALUE = 0
-TRANSCRIPTION_PROGRESS_MAX_VALUE = 100

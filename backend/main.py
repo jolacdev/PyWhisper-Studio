@@ -1,39 +1,37 @@
 import logging
 import multiprocessing
 import os
+from pathlib import Path
 
 import webview
+from platformdirs import user_data_dir
 
 from api.api import PyWebViewApi
 from constants import APP_NAME, ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
-from helpers.drag_drop_handler import bind_drag_drop_events
 from helpers.logging_helpers import setup_logging
 from helpers.webview_helpers import get_frontend_entrypoint, is_running_bundled
+from service.studio_service import StudioService
+from service.whisper_service import FasterWhisperEngine
 
 if __name__ == "__main__":
+    # Frozen subprocesses must return before creating another desktop window.
+    multiprocessing.freeze_support()
     is_bundled = is_running_bundled()
-
-    if is_bundled:
-        # NOTE: Avoid creating new windows for multiprocessing tasks if running bundled.
-        multiprocessing.freeze_support()
-
-    should_log = not is_bundled or ENABLE_BUNDLED_LOGGING
-    is_devtools_enabled = not is_bundled
-
-    setup_logging(
-        app_name=APP_NAME,
-        filename=LOGGING_FILENAME,
-        enable_logging=should_log,
-        log_level=logging.INFO,
-    )
-
-    frontend_entrypoint = get_frontend_entrypoint(os.path.dirname(__file__))
+    setup_logging(APP_NAME, LOGGING_FILENAME, not is_bundled or ENABLE_BUNDLED_LOGGING, logging.INFO)
+    directory = Path(os.environ.get("PYWHISPER_DATA_DIR", user_data_dir(APP_NAME)))
+    # Swap this adapter to change engines; the service and bridge stay the same.
+    service = StudioService(FasterWhisperEngine(), directory)
+    api = PyWebViewApi(service)
     window = webview.create_window(
-        title=APP_NAME, url=frontend_entrypoint, js_api=PyWebViewApi(), width=950, height=700
+        title=APP_NAME,
+        url=get_frontend_entrypoint(os.path.dirname(__file__)),
+        js_api=api,
+        width=1120,
+        height=800,
+        min_size=(760, 620),
+        background_color="#f5f5f0",
     )
-
-    is_devtools_enabled = not is_running_bundled()
-    # Bind after each DOM load; pywebview passes window to the callback.
-    window.events.loaded += bind_drag_drop_events
-    # The loaded event invokes the binder, so start needs no callback or args.
-    webview.start(debug=is_devtools_enabled)
+    if window is None:
+        raise RuntimeError("Could not create the desktop window.")
+    api._attach(window)
+    webview.start(debug=not is_bundled)

@@ -17,12 +17,12 @@ def get_frontend_entrypoint(backend_dir_path: str) -> str:
     paths = (
         "../frontend_dist/index.html",  # Development build (not frozen): Compiled but not bundled.
         "../Resources/frontend_dist/index.html",  # macOS executable (frozen): Bundled via PyInstaller.
-        "./frontend_dist/index.html",  # Windows executable (frozen): Bundled via PyInstaller (e.g., ..\AppData\Local\Temp\_MEIXXXXX\frontend_dist\index.html).
+        "./frontend_dist/index.html",  # Windows: extracted by PyInstaller.
     )
 
     for rel_path in paths:
         frontend_entrypoint_path = os.path.join(backend_dir_path, rel_path)
         if os.path.exists(frontend_entrypoint_path):
-            return rel_path
+            return os.path.abspath(frontend_entrypoint_path)
 
     raise Exception("No index.html found")

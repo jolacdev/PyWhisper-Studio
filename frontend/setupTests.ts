@@ -1,7 +1,7 @@
 // NOTE: https://vitest.dev/guide/extending-matchers
 import * as matchers from '@testing-library/jest-dom/matchers';
-import { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
 import { expect } from 'vitest';
+import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
 
 // NOTE: Extends TypeScript `Assertion` interface used in Vitest's `expect` with the Jest-DOM matchers.
 declare module 'vitest' {

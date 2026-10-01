@@ -1,16 +1,14 @@
 # Native window and Python-JavaScript bridge.
 pywebview==6.1
-# Package the desktop app as an executable.
-pyinstaller==6.16.0
-# Lint and format Python code.
-ruff==0.14.3
-# Check Python types.
-mypy==1.18.2
 # Locate user data and log directories.
 platformdirs==4.5.0
-# Generate TypeScript declarations from the Python API.
-pyflow-ts==0.2.4
 # Run local Whisper transcription.
 faster-whisper==1.2.1
 # Decode media; version 19 removed an argument used by faster-whisper 1.2.1.
 av==18.1.0
+# Download and locate model assets in the Faster-Whisper adapter.
+huggingface-hub==1.33.0
+# Validate CTranslate2 model folders and execute Whisper weights.
+ctranslate2==4.8.2
+# Validate the local tokenizer before allowing offline inference.
+tokenizers==0.23.2

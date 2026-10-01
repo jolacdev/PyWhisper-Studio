@@ -1,37 +1,33 @@
 # Code style
 
-## TypeScript and React
+## Code and comments
 
-- Follow existing TypeScript, React, ESLint, and Prettier patterns.
-- Prefer clear names, short functions, and early returns; extract for reuse or clearer responsibility.
-- Use functional components and hooks. Avoid unnecessary `useCallback` and `useMemo`.
-- Use `PascalCase` for components/types, `camelCase` for values/functions, and `use` for hooks.
-- Prefix booleans with `is`, `has`, `should`, `can`, `did`, or `will`.
-- Use the existing import aliases and keep feature-specific code inside its feature.
-- Handle rejected bridge promises and show actionable errors.
+- Prefer clear names, short functions, early returns, and `const`. Extract for reuse or clearer responsibility.
+- Keep Python typed and follow Ruff/MyPy; use functional React components and the existing import aliases.
+- Add a brief one-line Python docstring or `/** ... */` intent comment to named functions, hooks, and components.
+- Add one-line comments above non-obvious decisions; explain why. Link unusual external constraints.
+- Add guards, retries, or state only for concrete failure risks. Avoid speculative abstractions and unnecessary memoization.
+- Handle rejected promises. `void` does not catch a rejection; UI commands use the hook's error boundary.
 
-## Python
+## UI
 
-- Follow Ruff and MyPy; annotate parameters and return values.
-- Use `snake_case` for values/functions, `PascalCase` for classes, and `UPPER_SNAKE_CASE` for constants.
-- Keep API DTOs in `backend/schemas/`; use `TypedDict` for data crossing the bridge.
-- Use `logging` for diagnostics and `logger.exception` when catching an error.
-- Keep `Optional`/`Union` in exposed API signatures where PyFlow-TS requires them.
+- Use Tailwind for components; CSS for setup, five palette roles, native control defaults, and shared animation.
+- Keep short classes inline. Split long lists into a few `cn` strings, grouped roughly as layout → surfaces/spacing → typography → interaction.
+- `cn` uses `clsx` and `tailwind-merge`; Prettier sorts its strings. Use opacity variants rather than adding muted, border, or hover color tokens.
+- Use shared `Typography`, `Button`, `Icon`, and feedback components. Keep primitives independent of backend commands.
+- Register only MDI icons in `Icon`, using source slugs and a typed name union. ESLint blocks direct MDI imports and inline interface SVGs elsewhere.
+- Prefer native buttons, selects, labels, and headings. Give icon buttons accessible names; preserve keyboard focus, contrast, and reduced motion.
+- Support English and Spanish from Spain. Translate UI copy in both locale files; code and comments stay English. UI language is independent of spoken language.
 
-## UI and language
+## Dependencies
 
-- Use Tailwind/DaisyUI for component styles; use CSS for shared animations, theme, and base styles.
-- Use i18next for UI text in English and Spanish. Code, identifiers, and comments are in English.
-- Prefer native HTML semantics and accessible names for non-text controls.
+- Frontend imports used at runtime belong in `dependencies`; build, lint, type and test tools belong in `devDependencies`.
+- Python runtime packages go in `requirements.txt`; developer/packaging tools go in `requirements-dev.txt`, which includes runtime requirements.
 
-## Comments and complexity
+## Contracts
 
-- Put a brief, one-line comment above a statement or block when its reason is not clear from the code.
-- Explain constraints and decisions, not what the next line does. Use `NOTE:` or `TODO:` only when useful.
-- Link the source for a workaround or an unusual external requirement.
-- Add guards, defensive state, or retries only when a concrete failure risk justifies them.
-
-## Shared contracts
-
-- Preserve Python ↔ TypeScript names, including API methods, DTO fields, state keys, and dropzone IDs.
-- Generate `frontend/src/types/pywebview/pywebview-api.d.ts` with `pnpm gen-api`; review its diff. Maintain `pywebview-state.ts` alongside Python state changes.
+- Keep transport DTOs as JSON-only `TypedDict` types in `backend/schemas/`.
+- Preserve API names and DTO fields unless a contract change is intentional and both sides are updated.
+- Never hand-edit `pywebview-api.d.ts`. Run `pnpm gen-api`, review the diff, and check it with `pnpm check-api`.
+- Keep vendor types inside engine adapters. React reads backend state and owns only presentation state.
+- ESLint checks promises, type-only imports, layer boundaries, and icon usage; unit coverage is a separate iteration.

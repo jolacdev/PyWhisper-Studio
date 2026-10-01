@@ -1,75 +1,40 @@
-<div align="center">
-  <h1>PyWhisper Studio</h1>
-  <p>A desktop GUI implementation of <strong>Faster Whisper</strong> using a Python backend and React frontend.</p>
-</div>
+# PyWhisper Studio
 
----
+A local transcription desktop app built with Python, pywebview, React, and Faster-Whisper.
 
-## ✨ Features
+## Use
 
----
+1. Choose an audio or video file.
+2. Use an existing compatible model folder, or explicitly download a model in **Models**. Existing app and Hugging Face caches are detected first.
+3. Select the spoken language or use automatic detection, then transcribe.
+4. Read or copy the result, or export TXT, SRT, or VTT.
 
-## 🧩 Requirements
+Models are speech recognition packs. Downloads need internet; transcription uses local files and never uploads recordings. Start with **Base** for a small model, or **Tiny** for faster drafts. Compatible local folders contain CTranslate2 weights (`model.bin`), `config.json`, and `tokenizer.json`.
 
-- **Python ≥ 3.13**
-- **Node.js ≥ 22**
-- **pnpm ≥ 10** (enforced via `only-allow` in `preinstall`)
+This MVP processes one file at a time on the CPU. Cancellation takes effect between audio operations, or between download files. Transcripts stay in memory: export before closing the app or starting another transcription. History and editing are planned in [CHECKLIST.md](CHECKLIST.md).
 
-The first use of a Whisper model downloads it from Hugging Face. Once cached, the model loads without an Internet connection.
+The interface supports English and Spanish from Spain, with system, light, and dark appearances. The Models screen shows the storage path and lets you link an external folder without copying it.
 
----
+## Development
 
-## 🛠️ Stack
+Requires Python ≥3.13, Node ≥22.12, and pnpm ≥10. Python's version is checked by the launcher. `initialize` installs `requirements-dev.txt`, which includes the runtime-only `requirements.txt`.
 
-### 🐍 Backend (Python)
+`initialize` reuses an existing `.venv`. For a new environment, set `PYTHON` if the default command points to an older interpreter, for example `PYTHON=python3.13 pnpm initialize` on macOS/Linux.
 
-| Tool           | Description                                                         |
-| -------------- | ------------------------------------------------------------------- |
-| **Python**     | Backend language for application logic.                             |
-| **PyWebView**  | Provides a native desktop window with a Python ↔ JavaScript bridge. |
-| **Ruff, MyPy** | Linting and static type checking for Python.                        |
+| Command | Purpose |
+| --- | --- |
+| `pnpm initialize` | Install dependencies and create `.venv`. |
+| `pnpm start` | Build the frontend and run the native app. |
+| `pnpm dev:frontend` | Start Vite on port 3000. |
+| `pnpm dev:backend` | Run the native app against Vite. |
+| `pnpm gen-api` | Generate TypeScript API, DTO, and state declarations from Python. |
+| `pnpm check-api` | Fail if generated declarations are stale. |
+| `pnpm build` | Package the app on the current platform. |
+| `pnpm --dir frontend lint:no-fix` | Check TypeScript and ESLint. |
+| `pnpm --dir frontend test` | Run the existing unit tests. |
 
-### ⚛️ Frontend
+For browser-only UI development, open `http://localhost:3000/?preview`. It is explicitly labelled as simulated and is unavailable in production. `?preview=ready`, `?preview=error`, and `?preview=empty` exercise other states. Native dialogs and export require the desktop app.
 
-| Tool / Library                    | Description                               |
-| --------------------------------- | ----------------------------------------- |
-| **React 19**                      | Framework for building the UI components. |
-| **TypeScript**                    | Strong type checking.                     |
-| **ESLint, Prettier**              | Code quality and formatting.              |
-| **Tailwind CSS**                  | CSS library for styling.                  |
-| **Vitest, React Testing Library** | Unit and component testing.               |
-| **i18next, react-i18next**        | Internationalization support.             |
+Use `PYWHISPER_DATA_DIR` to isolate preferences and managed downloads during development. It does not hide the global Hugging Face cache. Python checks: `.venv/bin/ruff check backend` and `PYTHONPATH=backend .venv/bin/mypy --config-file backend/pyproject.toml --explicit-package-bases backend` (use the corresponding `.venv\Scripts` paths on Windows).
 
-### 📦 Build Tools
-
-| Tool                          | Description                                                             |
-| ----------------------------- | ----------------------------------------------------------------------- |
-| **PyInstaller**               | Bundles the Python application into a standalone executable.            |
-| **PyFlow-TS**                 | Generates TypeScript types for the Python API function definitions.     |
-| **Vite**                      | Bundles and optimizes frontend assets for production.                   |
-| **TypeScript Compiler (TSC)** | Type checking and TypeScript declaration file generation.               |
-| **pnpm**                      | Performant NPM with support to the `minimumReleaseAge` security feature |
-
----
-
-## 📝 Commands
-
-> [!NOTE]
->
-> - Scripts prefixed with `_` are internal helpers and should not be run directly.
-> - To change the React dev server port, update `vite.config.ts` and `entrypoint.py`.
-
-> [!TIP]
->
-> - For development, it is recommended to run the application with **frontend hot reload** using `pnpm dev:frontend` and `pnpm dev:backend`.
-> - Alternatively, use `pnpm start` to run the app with the frontend bundled, which **behaves closer to the final production binary** but does not support hot reload.
-
-| Action                               | Command             | Description                                                                                                           |
-| ------------------------------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| ⚙️ Setup                             | `pnpm initialize`   | Install dependencies and create Python virtual environment.                                                           |
-| ⚛️ Run Frontend                      | `pnpm dev:frontend` | Start React dev server. Can be accessed standalone if the `isStandalone` prop is set (e.g., `http://localhost:3000`). |
-| 🔄 Run Backend (Frontend Hot Reload) | `pnpm dev:backend`  | Run PyWebView with hot reload (**requires `dev:frontend` running**).                                                  |
-| 🐍 Run App (Bundled Frontend)        | `pnpm start`        | Build frontend and run PyWebView using the bundled assets.                                                            |
-| 🔧 Generate API Types                | `pnpm gen-api`      | Generate TypeScript types for Python API using pyflow-ts.                                                             |
-| 📦 Build                             | `pnpm build`        | Build the full application binary for distribution.                                                                   |
-| 🧹 Clean                             | `pnpm clean`        | Remove build artifacts.                                                                                               |
+See [ARCHITECTURE.md](ARCHITECTURE.md), [CODE_STYLE.md](CODE_STYLE.md), and [IMPROVEMENTS.md](IMPROVEMENTS.md) for boundaries, conventions, and design decisions. [PROJECT_STATUS.md](PROJECT_STATUS.md) is the earlier historical audit, not the current implementation status.

@@ -11,6 +11,9 @@ allowBuilds:
   '@tailwindcss/oxide': false
   # No msw.workerDirectory is configured, so its worker-update script has nothing to do.
   msw: false
+  # ESLint's resolver includes optional platform binaries; skip its fallback downloader.
+  # https://github.com/unrs/unrs-resolver/blob/main/postinstall.js
+  'unrs-resolver@1.12.2': false
 
 # minimumReleaseAge — default: 0 (minutes)
 minimumReleaseAge: 20160 # 2 Weeks

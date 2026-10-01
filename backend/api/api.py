@@ -1,91 +1,151 @@
 import logging
-from time import time
-from typing import Optional
+import os
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
 
-import faster_whisper
 import webview
-from pyflow import extensity
+from webview.dom import DOMEventHandler
+from webview.dom.element import Element
 
 from schemas.file_metadata import FileMetadata
-from schemas.transcription import TranscriptionSegment
-from service.whisper_service import whisper_service
-from utils.media_utils import get_file_metadata_from_path, get_media_dialog_file_types
-from utils.time_utils import format_seconds_to_srt_time as secs_to_srt
-from utils.whisper_utils import process_segments
-
-# NOTE: Prefer using Union/Optional over `|` to support PyFlow-TS proper type generation.
-# https://github.com/ExtensityAI/PyFlow.ts?tab=readme-ov-file#custom-type-mappings
+from schemas.studio import AppState, ExportFormat, InterfaceLanguage, Job, ModelInfo, Theme, Transcript
+from service.studio_service import StudioService
+from utils.export_utils import render_transcript
+from utils.media_utils import get_media_dialog_file_types
 
 logger = logging.getLogger(__name__)
 
 
-@extensity
 class PyWebViewApi:
-    """Python API functions exposed to JavaScript."""
+    """Expose typed commands and native dialogs while the service owns application state."""
 
-    # def _gen_types(self) -> Union[TranscriptionSegment, FileMetadata, None]:
-    #     """Method to expose and generate types for PyFlow-TS."""
-    #     return None
+    def __init__(self, service: StudioService) -> None:
+        """Inject the application service so another engine needs no bridge changes."""
+        self._service = service
+        self._window: webview.Window | None = None
+        self._drop_element: Element | None = None
 
-    def open_file_dialog(self) -> Optional[FileMetadata]:
-        file_types = get_media_dialog_file_types()
+    def _attach(self, window: webview.Window) -> None:
+        """Publish one top-level property because pywebview does not track nested mutations."""
+        self._window = window
+        window.events.loaded += self._reset_dropzone
+        self._service.subscribe(lambda state: setattr(window.state, "studio", state))
+        window.state.studio = self._service.snapshot()
 
-        result = webview.windows[0].create_file_dialog(
-            webview.FileDialog.OPEN, allow_multiple=False, file_types=file_types
+    def _reset_dropzone(self) -> None:
+        """Discard DOM references when the page reloads and pywebview clears its elements."""
+        self._drop_element = None
+
+    def _get_window(self) -> webview.Window:
+        """Require a native window for operations that cannot run headlessly."""
+        if self._window is None:
+            raise RuntimeError("The desktop window is not ready.")
+        return self._window
+
+    def get_state(self) -> AppState:
+        """Hydrate React after readiness or reload without starting another job."""
+        return self._service.snapshot()
+
+    def open_file_dialog(self) -> FileMetadata | None:
+        """Let the operating system choose one local media file."""
+        result = self._get_window().create_file_dialog(
+            webview.FileDialog.OPEN, allow_multiple=False, file_types=get_media_dialog_file_types()
         )
+        return self._service.select_file(str(result[0])) if result else None
 
+    def clear_file(self) -> None:
+        """Clear the pending input without deleting the user's file."""
+        self._service.select_file(None)
+
+    def set_preferences(self, model_id: str, language: str) -> None:
+        """Persist the selected local model and spoken language."""
+        self._service.set_preferences(model_id, language)
+
+    def set_appearance(self, theme: Theme, language: InterfaceLanguage) -> None:
+        """Keep interface preferences separate from the recording's spoken language."""
+        self._service.set_appearance(theme, language)
+
+    def select_model_folder(self) -> ModelInfo | None:
+        """Validate and link a native folder chosen by the user."""
+        result = self._get_window().create_file_dialog(webview.FileDialog.FOLDER)
+        return self._service.import_model(Path(str(result[0]))) if result else None
+
+    def refresh_models(self) -> None:
+        """Rescan local model locations without using the network."""
+        self._service.refresh_models()
+
+    def open_models_folder(self) -> None:
+        """Reveal the application-managed model directory with the platform file manager."""
+        path = str(self._service.models_directory)
+        if sys.platform == "win32":
+            os.startfile(path)
+        else:
+            subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", path])
+
+    def download_model(self, model_id: str) -> Job:
+        """Start a download only after an explicit UI command."""
+        return self._service.start("download", model_id)
+
+    def run_transcription(self, file_path: str, model_name: str, language: str = "auto") -> Job:
+        """Return a job immediately; progress and completion arrive through shared state."""
+        return self._service.start("transcription", model_name, file_path, language)
+
+    def cancel_job(self, job_id: str) -> None:
+        """Request cancellation at the engine's next safe boundary."""
+        self._service.cancel(job_id)
+
+    def get_transcript(self, job_id: str) -> Transcript:
+        """Fetch completed content separately from lightweight progress snapshots."""
+        return self._service.result(job_id)
+
+    def export_transcript(self, job_id: str, format: ExportFormat) -> str | None:
+        """Save text or subtitles through a native dialog and report cancellation distinctly."""
+        transcript = self._service.result(job_id)
+        content = render_transcript(transcript, format)
+        filename = f"{Path(transcript['file']['name']).stem}.{format}"
+        result = self._get_window().create_file_dialog(
+            webview.FileDialog.SAVE,
+            save_filename=filename,
+            file_types=(f"{format.upper()} (*.{format})",),
+        )
         if not result:
             return None
+        path = Path(result if isinstance(result, str) else result[0])
+        if path.suffix.lower() != f".{format}":
+            # Do not silently rename a confirmed target and overwrite a different file.
+            raise ValueError(f"Use a filename ending in .{format} and export again.")
+        path.write_text(content, encoding="utf-8")
+        return str(path)
 
-        file_path = str(result) if not isinstance(result, (tuple, list)) else str(result[0])
-        file_metadata = get_file_metadata_from_path(file_path)
-        logger.info("File picked: %s", file_metadata)
-        return file_metadata
-
-    # TODO: Print messages for debugging purposes, remove whe not needed.
-    # TODO: Online audio example: https://keithito.com/LJ-Speech-Dataset/LJ037-0171.wav
-    def run_transcription(self, file_path: str, model_name: str) -> list[TranscriptionSegment]:
-        # Reset transcription state
-        webview.windows[0].state.transcriptionProgress = None
-        webview.windows[0].state.transcriptionRemainingSeconds = None
-        webview.windows[0].state.isAbortRequested = False
-
-        if model_name not in faster_whisper.available_models():
-            raise ValueError(f"Model '{model_name}' is not available.")
-
+    def bind_dropzone(self) -> bool:
+        """Bind the mounted dropzone, retaining the file picker if pywebview DOM binding fails."""
         try:
-            if (transcription_result := whisper_service.transcribe(file_path, model_name)) is None:
-                raise ValueError("Transcription result returned `None`")
-
-            raw_segments, info = transcription_result
-            total_duration_seconds = info.duration
-
-            logger.debug("Transcription info: %s", info)
-            logger.info("Starting transcription of: %s", file_path)
-
-            start_time_ms = time() * 1000
-            segments = process_segments(raw_segments, total_duration_seconds, start_time_ms)
-            end_time_ms = time() * 1000
-
-            for s in segments:
-                logger.debug(
-                    "\n%s\n%s --> %s\n%s\n",
-                    s["id"],
-                    secs_to_srt(s["start"]),
-                    secs_to_srt(s["end"]),
-                    s["text"],
-                )
-
-            elapsed_seconds = (end_time_ms - start_time_ms) / 1000
-            logger.info("Transcribed %d segments in in %.2f seconds.", len(segments), elapsed_seconds)
-
-            return segments
-
-        except FileNotFoundError:
-            logger.exception("File not found.")
-        except ConnectionError:
-            logger.exception("Network connection failed.")
+            if self._drop_element is not None:
+                self._drop_element.off("drop", self._on_drop)
+            self._drop_element = self._get_window().dom.get_element("#file-dropzone")
+            if self._drop_element is None:
+                return False
+            handler = DOMEventHandler(self._on_drop, prevent_default=True, stop_propagation=True)
+            self._drop_element.on("drop", handler)
+            return True
         except Exception:
-            logger.exception("Error during transcription.")
+            # pywebview 6.1 can fail during DOM event enumeration on Cocoa; browsing still works.
+            logger.exception("Native drop binding failed")
+            return False
 
-        return []
+    def _on_drop(self, event: dict[str, Any]) -> None:
+        """Use native full paths instead of guessing paths from browser File names."""
+        files = event.get("dataTransfer", {}).get("files", [])
+        if not files:
+            return
+        try:
+            if len(files) != 1:
+                raise ValueError("Choose one audio or video file at a time.")
+            path = files[0].get("pywebviewFullPath")
+            if not path:
+                raise ValueError("The dropped file path is unavailable. Use Choose file instead.")
+            self._service.select_file(path)
+        except (ValueError, OSError) as error:
+            self._service.notify(str(error))

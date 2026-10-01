@@ -1,32 +1,36 @@
 # Architecture
 
-## Entrypoints
+## Boundaries
 
-- `backend/main.py`: creates the pywebview window, configures logging, and registers drag-and-drop events.
-- `frontend/src/main.tsx`: mounts React inside `PyWebViewProvider`.
-- Vite serves or builds the frontend; PyInstaller packages the desktop application for macOS/Windows.
+- `backend/main.py`: composes the engine, application service, API, and native window.
+- `backend/service/studio_service.py`: owns preferences, selected input, one active job, and the current result. No pywebview or inference-library imports.
+- `backend/service/engine.py`: engine protocol and normalized inference output. `whisper_service.py` implements Faster-Whisper discovery, validation, download, and inference.
+- `backend/api/api.py`: typed commands, native dialogs, drag-and-drop, and export. `schemas/` defines JSON contracts; `utils/` contains media and export helpers.
+- React `App` coordinates navigation; `screens/` compose flows; `features/studio/` subscribes to backend state; `shared/` contains reusable presentation and utilities.
+- Shared code cannot import features or screens; features cannot import screens. ESLint checks these boundaries.
 
-## Layers and boundaries
+## Python ↔ JavaScript
 
-- `backend/api/`: methods exposed to JavaScript. `backend/service/`: model loading and transcription.
-- `backend/utils/`: media metadata, segment processing, time formatting. `backend/schemas/`: shared DTOs.
-- `frontend/src/screens/`: screen composition. `features/`: file selection and transcription. `shared/`: reusable UI and hooks.
-- `frontend/src/store/`: local navigation and selected-file state. Keep feature-specific logic near its feature.
+- `window.pywebview.api` exposes promise-based commands after `pywebviewready`.
+- Python owns `window.state.studio`. React subscribes before requesting `get_state()` and ignores older revisions; it never writes shared state.
+- `run_transcription` returns a `Job` immediately. A worker publishes progress at most four times per second, plus phase changes. Full segments travel once through `get_transcript`.
+- One lock serializes state changes and job admission because pywebview invokes API methods on separate threads. Cancellation targets a job ID and takes effect between native operations.
+- `pnpm gen-api` generates API methods, DTOs, and shared state from Python annotations. `pnpm check-api` detects drift. Unsupported annotations fail generation; no `any` fallback.
+- Browser simulation requires development mode and `?preview`; production always uses the native bridge.
 
-## Python ↔ JavaScript bridge
+## Models and persistence
 
-- `create_window(js_api=PyWebViewApi())` exposes methods through `window.pywebview.api`; calls return promises.
-- `PyWebViewProvider` waits for `pywebviewready`. Standalone browser mode uses `mockPyWebView.ts` instead.
-- Python `window.state` and JavaScript `window.pywebview.state` synchronize top-level properties. React subscribes through `usePyWebViewState`.
-- PyFlow-TS generates `pywebview-api.d.ts` from Python; `pywebview-state.ts` describes shared state manually. Keep names aligned.
-- Python binds drag-and-drop handlers after `window.events.loaded` and writes the selected file to shared state.
+- Discover valid local app/Hub caches first. A native folder picker links external models without copying them.
+- Downloads happen only through `download_model`. Inference receives a validated local directory with its tokenizer; it never downloads assets.
+- JSON preferences persist model paths, selected model, spoken language, interface language, and appearance. The OS app-data directory owns this file and the managed model cache; `PYWHISPER_DATA_DIR` overrides it for isolated runs.
+- One transcript stays in memory until replaced or the app closes. TXT/SRT/VTT exports use native save dialogs. History and editing remain deferred.
 
-## Transcription flow
+## Replacing the engine
 
-- File selection updates shared state; `useSyncedTranscriptionFile` reflects it in Zustand.
-- `useSyncedTranscription` calls `run_transcription` when the transcription screen mounts.
-- Python reuses a faster-whisper model, consumes its segments, and publishes progress and remaining time.
-- Cancel sets `isAbortRequested`; Python checks it between segments. The completed promise returns all segments to the result screen.
-- The current UI requests one file at a time with the `base` model; inference is forced to CPU.
+1. Implement `TranscriptionEngine`: capability metadata, local discovery/validation, explicit download, and transcription.
+2. Return `ModelInfo` and `EngineResult`; translate vendor output into timed `TranscriptionSegment` objects. Keep network/cache details inside the adapter.
+3. Check cancellation between supported operations and report real progress, or `None` when unknown.
+4. Inject the adapter in `main.py`; adjust dependencies and packaging assets. Add its explanatory copy to both locales.
+5. Regenerate types only if the public contract changes. The job service, screens, copy, and exports remain reusable.
 
-See [PROJECT_STATUS.md](PROJECT_STATUS.md) for known defects and proposed changes.
+A provider needs timestamps to support subtitle export. A provider without them requires an explicit capability change, not fabricated timings.
