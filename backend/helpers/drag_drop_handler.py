@@ -48,18 +48,21 @@ def on_drop(event: dict[str, Any]) -> None:
 def bind_drag_drop_events(window: webview.Window) -> None:
     """Bind drag and drop handlers to the entire PyWebView window."""
 
-    window.dom.document.events.dragenter += DOMEventHandler(
+    # Reuse the loaded document instead of evaluating it once per handler.
+    document_events = window.dom.document.events
+
+    document_events.dragenter += DOMEventHandler(
         callback=on_drag, prevent_default=True, stop_propagation=True
     )  # type: ignore[arg-type]
-    window.dom.document.events.dragstart += DOMEventHandler(
+    document_events.dragstart += DOMEventHandler(
         callback=on_drag, prevent_default=True, stop_propagation=True
     )  # type: ignore[arg-type]
-    window.dom.document.events.dragover += DOMEventHandler(
+    document_events.dragover += DOMEventHandler(
         callback=on_drag,
         prevent_default=True,
         stop_propagation=True,
         debounce=500,  # Debounce to reduce performance impact
     )  # type: ignore[arg-type]
-    window.dom.document.events.drop += DOMEventHandler(
+    document_events.drop += DOMEventHandler(
         callback=on_drop, prevent_default=True, stop_propagation=True
     )  # type: ignore[arg-type]

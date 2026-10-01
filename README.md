@@ -15,6 +15,8 @@
 - **Node.js ≥ 22**
 - **pnpm ≥ 10** (enforced via `only-allow` in `preinstall`)
 
+The first use of a Whisper model downloads it from Hugging Face. Once cached, the model loads without an Internet connection.
+
 ---
 
 ## 🛠️ Stack

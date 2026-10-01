@@ -2,6 +2,7 @@ import logging
 import os
 
 from faster_whisper import WhisperModel
+from huggingface_hub.errors import LocalEntryNotFoundError
 from platformdirs import user_data_dir
 
 from constants import APP_NAME, MODELS_DIR
@@ -38,7 +39,15 @@ class WhisperModelService:
         # Switch back to device="auto" once fixed.
         device = "cpu"
 
-        self._model = WhisperModel(model_name, download_root=models_dir, device=device)
+        # Use the cached model without contacting Hugging Face on later launches.
+        try:
+            self._model = WhisperModel(
+                model_name, download_root=models_dir, device=device, local_files_only=True
+            )
+        except LocalEntryNotFoundError:
+            # The first use downloads the model for future offline transcriptions.
+            logger.info("Model '%s' is not cached; downloading it.", model_name)
+            self._model = WhisperModel(model_name, download_root=models_dir, device=device)
         self._current_model_name = model_name
         logger.info("Model '%s' loaded from '%s' successfully.", model_name, models_dir)
 

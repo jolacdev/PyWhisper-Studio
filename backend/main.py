@@ -33,4 +33,7 @@ if __name__ == "__main__":
     )
 
     is_devtools_enabled = not is_running_bundled()
-    webview.start(bind_drag_drop_events, args=(window,), debug=is_devtools_enabled)
+    # Bind after each DOM load; pywebview passes window to the callback.
+    window.events.loaded += bind_drag_drop_events
+    # The loaded event invokes the binder, so start needs no callback or args.
+    webview.start(debug=is_devtools_enabled)
