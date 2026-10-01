@@ -18,11 +18,18 @@ One local audio/video file → choose or download a model → transcribe with pr
 | No durable output | Native TXT/SRT/VTT export and copy; replacement warning before discarding the current result. |
 | Fragmented visual primitives and theme values | Shared components, MDI registry, `cn`, five palette roles, readable opacity variants. |
 | Shell-based Python scripts and PyFlow intermediate output | One argument-based launcher; enforced Python ≥3.13; direct declaration generation. |
+| Moved inputs stayed selected | Revalidate on screen entry and window focus; clear unavailable input while retaining the completed result. |
+| Brand-specific internal names | `TranscriptionService`, `useTranscription`, `app_state.py`, and generated `state.app`; existing data paths stay stable. |
+| Verbose screens and inconsistent controls | Direct EN/ES copy, neutral dark surfaces, shared Select geometry, compact sidebar, and no decorative breadcrumb bar. |
+| Transcript segments resembled unrelated paragraphs | Continuous text/TXT export, aligned timestamp rows with segment copy, and scrollable content with persistent controls. |
+| Feedback shifted the layout | Floating react-hot-toast notifications; persistent dismissible errors and timed success messages. |
+| Native macOS title overlapped window controls | Hide the native title before showing the window and disable window tabbing; retain native traffic-light controls and sidebar branding. |
 
 ## Product and technical tradeoffs
 
 - CPU/int8 is the portable default. GPU support needs platform-specific validation.
 - Cancellation waits for the current inference operation; downloads stop between files. Loading/decoding may take time before the next cancellation check.
+- Remaining time is an estimate from measured inference progress, available after two advancing samples. It excludes loading/decoding and can change with speech density or processing speed.
 - Download progress names the current file; it does not imply a byte percentage. Failed downloads can be retried explicitly and reuse cached files.
 - Model validation checks local assets and tokenizer readability; incompatible or damaged weights can still fail when loaded, with a visible error.
 - Native file selection is always available. If pywebview 6.1 DOM binding fails, the UI offers browsing instead of advertising unavailable drag-and-drop.
@@ -36,10 +43,14 @@ One local audio/video file → choose or download a model → transcribe with pr
 - PyInstaller produced and launched a macOS bundle; VAD assets were included. Native source startup reached bridge readiness without the earlier DOM exception.
 - Visual inspection and native dialog interaction could not run because computer-control tools were unavailable. Windows, clean-machine packaging, accessibility review, and permanent integration coverage remain in `CHECKLIST.md`.
 
+UX follow-up: reviewed supplied macOS screenshots. Regression checks cover moved inputs, retained results, metadata refresh, ETA/cancellation, segment copying, floating feedback, EN/ES, and exports. Updated native startup passes; final visual appearance still needs manual confirmation.
+
 ## References
 
 - [GoWhisper](https://gowhisper.io/): short file/model/export flow and local-processing emphasis.
 - [Backloggd Plus reference branch](https://github.com/jolacdev/backloggd-plus/tree/feature/game-collection-export-redesign): `cn`, grouped classes, restrained tokens, shared typography, and MDI source slugs.
+- [react-hot-toast](https://react-hot-toast.com/docs/toaster): floating feedback with custom styles and MDI icons; declared as a frontend runtime dependency.
+- [NSWindow title visibility](https://developer.apple.com/documentation/appkit/nswindow/titlevisibility): native title treatment without replacing macOS window controls.
 - [pywebview bridge](https://pywebview.flowrl.com/guide/interdomain.html): promise commands, threaded API calls, and top-level shared-state updates.
 - [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper): local CTranslate2 models, bundled media decoding, and CPU/int8 inference.
 - [Hugging Face downloads](https://huggingface.co/docs/huggingface_hub/guides/download): cached snapshots and file filters. Discovery filters model assets so missing repository documentation does not invalidate an existing model.

@@ -8,8 +8,7 @@ from threading import Event, RLock, Thread
 from time import monotonic
 from uuid import uuid4
 
-from schemas.file_metadata import FileMetadata
-from schemas.studio import (
+from schemas.app_state import (
     AppState,
     InterfaceLanguage,
     Job,
@@ -19,6 +18,7 @@ from schemas.studio import (
     Theme,
     Transcript,
 )
+from schemas.file_metadata import FileMetadata
 from service.engine import CancelledError, TranscriptionEngine
 from utils.media_utils import get_file_metadata_from_path, is_media_file
 
@@ -34,6 +34,7 @@ def empty_job() -> Job:
         "kind": "transcription",
         "status": "idle",
         "progress": None,
+        "remainingSeconds": None,
         "message": "",
         "error": None,
         "modelId": "",
@@ -41,7 +42,7 @@ def empty_job() -> Job:
     }
 
 
-class StudioService:
+class TranscriptionService:
     """Own preferences and one active job independently of the UI and inference library."""
 
     def __init__(self, engine: TranscriptionEngine, directory: Path) -> None:
@@ -55,6 +56,7 @@ class StudioService:
         self._publish_callback: Callable[[AppState], None] | None = None
         self._result: Transcript | None = None
         self._last_report = 0.0
+        self._progress_origin: tuple[float, float] | None = None
         preferences, notice = self._read_preferences()
         models = engine.list_models(self.models_directory, preferences["localModelPaths"])
         if not any(m["id"] == preferences["modelId"] and m["isAvailable"] for m in models):
@@ -149,7 +151,11 @@ class StudioService:
             self._require_idle()
             metadata = None
             if path:
-                if not is_media_file(path) or not Path(path).is_file():
+                if not Path(path).is_file():
+                    raise ValueError(
+                        "The file was moved or deleted. Choose it again from its current location."
+                    )
+                if not is_media_file(path):
                     raise ValueError("Choose a supported audio or video file on your computer.")
                 metadata = get_file_metadata_from_path(path)
                 if metadata is None or metadata["size"] == 0:
@@ -158,6 +164,23 @@ class StudioService:
             self._state["notice"] = None
             self._publish()
             return metadata
+
+    def refresh_file(self) -> FileMetadata | None:
+        """Revalidate pending input when returning to the app without discarding a transcript."""
+        with self._lock:
+            file = self._state["transcriptionFile"]
+            if file is None or self._state["job"]["status"] in ACTIVE_STATUSES:
+                return file
+            try:
+                return self.select_file(file["absolutePath"])
+            except (ValueError, OSError):
+                self._state["transcriptionFile"] = None
+                self._state["notice"] = (
+                    "The selected file is no longer available. "
+                    "It may have been moved or deleted. Choose it again."
+                )
+                self._publish()
+                return None
 
     def set_preferences(self, model_id: str, language: str) -> None:
         """Validate choices against engine capabilities before persisting them."""
@@ -233,11 +256,13 @@ class StudioService:
                 self._state["transcriptId"] = None
             self._cancel.clear()
             self._last_report = 0
+            self._progress_origin = None
             job: Job = {
                 "id": uuid4().hex,
                 "kind": kind,
                 "status": "loading",
                 "progress": None,
+                "remainingSeconds": None,
                 "message": "Loading model…" if kind == "transcription" else "Connecting to download source…",
                 "error": None,
                 "modelId": model_id,
@@ -259,7 +284,15 @@ class StudioService:
             if now - self._last_report < PROGRESS_INTERVAL_SECONDS and job["message"] == message:
                 return
             self._last_report = now
-            job.update(status="running", progress=progress, message=message)
+            remaining = None
+            if progress is not None and job["kind"] == "transcription":
+                if self._progress_origin is None:
+                    self._progress_origin = (now, progress)
+                start_time, start_progress = self._progress_origin
+                # Estimate from measured inference progress, excluding model loading and audio decoding.
+                if progress > start_progress:
+                    remaining = max(0.0, (100 - progress) * (now - start_time) / (progress - start_progress))
+            job.update(status="running", progress=progress, remainingSeconds=remaining, message=message)
             self._publish()
 
     def _run(self, job: Job, model: ModelInfo, file: FileMetadata | None, language: str) -> None:
@@ -293,16 +326,20 @@ class StudioService:
                 else:
                     self._result = result
                     self._state["transcriptId"] = job["id"]
-                self._state["job"].update(status="completed", progress=100, message="")
+                self._state["job"].update(status="completed", progress=100, remainingSeconds=None, message="")
                 self._publish()
         except CancelledError:
             with self._lock:
-                self._state["job"].update(status="cancelled", progress=None, message="")
+                self._state["job"].update(
+                    status="cancelled", progress=None, remainingSeconds=None, message=""
+                )
                 self._publish()
         except Exception as error:
             logger.exception("%s failed", job["kind"])
             with self._lock:
-                self._state["job"].update(status="error", progress=None, message="", error=str(error))
+                self._state["job"].update(
+                    status="error", progress=None, remainingSeconds=None, message="", error=str(error)
+                )
                 self._publish()
 
     def cancel(self, job_id: str) -> None:
@@ -312,6 +349,7 @@ class StudioService:
             if job["id"] == job_id and job["status"] in ACTIVE_STATUSES:
                 self._cancel.set()
                 job["status"] = "cancelling"
+                job["remainingSeconds"] = None
                 self._publish()
 
     def result(self, job_id: str) -> Transcript:

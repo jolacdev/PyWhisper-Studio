@@ -10,39 +10,51 @@ from huggingface_hub import HfApi, hf_hub_download, snapshot_download
 from huggingface_hub.errors import LocalEntryNotFoundError
 from tokenizers import Tokenizer
 
-from schemas.studio import EngineInfo, ModelInfo
+from schemas.app_state import EngineInfo, ModelInfo
 from schemas.transcription import TranscriptionSegment
 from service.engine import CancelledError, EngineResult, ProgressCallback
 
 # Sizes describe approximate downloads, not RAM requirements.
 MODEL_CATALOG = [
-    ("tiny", "Tiny", "Fast drafts and short recordings.", "≈75 MB", "Systran/faster-whisper-tiny"),
-    ("base", "Base", "A good place to start. Light and quick.", "≈145 MB", "Systran/faster-whisper-base"),
+    (
+        "tiny",
+        "Tiny",
+        "Fast transcription with lower resource requirements.",
+        "≈75 MB",
+        "Systran/faster-whisper-tiny",
+    ),
+    (
+        "base",
+        "Base",
+        "Balanced speed and accuracy for general use.",
+        "≈145 MB",
+        "Systran/faster-whisper-base",
+    ),
     (
         "small",
         "Small",
-        "More accurate, with a little more patience.",
+        "Higher accuracy with moderate processing time.",
         "≈485 MB",
         "Systran/faster-whisper-small",
     ),
     (
         "medium",
         "Medium",
-        "Detailed transcription. Slower on most computers.",
+        "Higher accuracy with increased memory and processing time.",
         "≈1.5 GB",
         "Systran/faster-whisper-medium",
     ),
     (
         "large-v3",
         "Large v3",
-        "Highest quality; needs more memory and time.",
+        "High accuracy with substantial memory requirements.",
         "≈3.1 GB",
         "Systran/faster-whisper-large-v3",
     ),
     (
         "turbo",
         "Turbo",
-        "A faster large model; still demanding on CPU.",
+        "Faster large-model transcription with increased memory requirements.",
         "≈1.6 GB",
         "mobiuslabsgmbh/faster-whisper-large-v3-turbo",
     ),

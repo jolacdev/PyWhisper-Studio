@@ -8,6 +8,8 @@
 - [x] Read-only text/timestamp views, copy, and native TXT/SRT/VTT export.
 - [x] English / Spain Spanish, system/light/dark themes, shared UI primitives.
 - [x] Persist model and interface preferences; warn before replacing a result.
+- [x] Revalidate moved/deleted inputs on entry and window focus without losing the current transcript.
+- [x] Estimated transcription time, floating notifications, neutral dark theme, compact screens, and segment copying.
 
 ## Next product iteration
 

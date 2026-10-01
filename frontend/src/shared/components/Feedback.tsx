@@ -1,3 +1,4 @@
+import toast, { ToastBar, Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
@@ -6,6 +7,58 @@ import type { Job } from 'types/pywebview/pywebview-api';
 
 import Button from './Button';
 import Icon from './Icon';
+
+/** Float dismissible feedback without moving the workspace or stealing keyboard focus. */
+export const Notifications = () => {
+  const { t } = useTranslation();
+  return (
+    <Toaster
+      position="bottom-right"
+      toastOptions={{
+        duration: 4000,
+        error: { duration: Infinity },
+        style: {
+          background: 'var(--surface)',
+          border: '1px solid color-mix(in srgb, var(--ink) 15%, transparent)',
+          borderRadius: 12,
+          color: 'var(--ink)',
+          fontSize: 14,
+          maxWidth: 400,
+          padding: 12,
+        },
+      }}
+    >
+      {(notification) => (
+        <ToastBar toast={notification}>
+          {({ message }) => (
+            <>
+              <Icon
+                className={cn(
+                  'size-5 shrink-0',
+                  notification.type === 'error' ? 'text-danger' : 'text-accent',
+                )}
+                name={
+                  notification.type === 'success'
+                    ? 'check'
+                    : 'information-outline'
+                }
+              />
+              <div className="min-w-0 flex-1 break-words">{message}</div>
+              <button
+                aria-label={t('Dismiss notification')}
+                className="text-ink/70 hover:bg-ink/5 self-start rounded-lg p-1.5"
+                type="button"
+                onClick={() => toast.dismiss(notification.id)}
+              >
+                <Icon className="size-4" name="close" />
+              </button>
+            </>
+          )}
+        </ToastBar>
+      )}
+    </Toaster>
+  );
+};
 
 type NoticeProps = {
   children: ReactNode;
@@ -54,9 +107,9 @@ export const JobProgress = ({ job, onCancel }: JobProgressProps) => {
   const isCancelling = job.status === 'cancelling';
   const isDownload = job.kind === 'download';
   const title = isCancelling
-    ? t('Stopping safely…')
+    ? t('Cancelling…')
     : isDownload
-      ? t('Downloading your model')
+      ? t('Downloading model')
       : t(job.message);
   return (
     <section
@@ -94,12 +147,22 @@ export const JobProgress = ({ job, onCancel }: JobProgressProps) => {
         value={job.progress ?? undefined}
       />
       <div className="text-ink/70 mt-2 flex justify-between text-xs">
-        <span>
-          {t(
-            isDownload
-              ? 'Internet is only needed for this download.'
-              : 'You can cancel between audio blocks.',
+        <span
+          title={t(
+            'Estimate based on processing speed. It may change as transcription progresses.',
           )}
+        >
+          {isDownload
+            ? t('Internet is only needed for this download.')
+            : isCancelling
+              ? t('Cancellation requested')
+              : job.remainingSeconds === null
+                ? t('Estimating remaining time…')
+                : job.remainingSeconds < 60
+                  ? t('Estimated: less than a minute remaining')
+                  : t('Estimated: {{minutes}} min remaining', {
+                      minutes: Math.ceil(job.remainingSeconds / 60),
+                    })}
         </span>
         <span className="tabular-nums">
           {job.progress === null

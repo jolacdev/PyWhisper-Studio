@@ -1,4 +1,4 @@
-from schemas.studio import ExportFormat, Transcript
+from schemas.app_state import ExportFormat, Transcript
 from utils.time_utils import format_seconds_to_srt_time
 
 
@@ -6,7 +6,7 @@ def render_transcript(transcript: Transcript, format: ExportFormat) -> str:
     """Export normalized segments while keeping their original timing and Unicode text."""
     segments = transcript["segments"]
     if format == "txt":
-        return "\n\n".join(segment["text"] for segment in segments) + "\n"
+        return " ".join(segment["text"].strip() for segment in segments) + "\n"
     if format not in ("srt", "vtt"):
         raise ValueError("Choose TXT, SRT or VTT.")
     blocks = []

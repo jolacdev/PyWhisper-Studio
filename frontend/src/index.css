@@ -23,18 +23,18 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --canvas: #171d1a;
-    --surface: #202823;
-    --ink: #e6ece7;
+    --canvas: #191a1c;
+    --surface: #232426;
+    --ink: #ececee;
     --accent: #75c59a;
     --danger: #f4aaa2;
   }
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --canvas: #171d1a;
-  --surface: #202823;
-  --ink: #e6ece7;
+  --canvas: #191a1c;
+  --surface: #232426;
+  --ink: #ececee;
   --accent: #75c59a;
   --danger: #f4aaa2;
 }
@@ -58,12 +58,6 @@
   }
   ::selection {
     @apply bg-accent/20 text-ink;
-  }
-  select {
-    @apply border-ink/15 bg-surface text-ink min-h-10 w-full rounded-xl border py-2 pr-8 pl-3 text-[13px];
-  }
-  select:disabled {
-    @apply cursor-not-allowed opacity-60;
   }
   progress {
     @apply bg-ink/12 appearance-none overflow-hidden rounded-full border-0;

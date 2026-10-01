@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import Button from '@components/Button';
 import Icon from '@components/Icon';
+import Select from '@components/Select';
 import Typography from '@components/Typography';
 import { cn } from '@utils/cn';
 import { formatSizeUnit } from '@utils/formatSizeUnit';
@@ -18,7 +19,7 @@ type FileSelectionScreenProps = {
   onTranscribe: () => void;
 };
 
-/** Compose the input workflow while Python validates files and model choices. */
+/** Keep file selection and transcription settings visible in a compact workflow. */
 const FileSelectionScreen = ({
   onClearFile,
   onModels,
@@ -57,32 +58,22 @@ const FileSelectionScreen = ({
     };
   }, []);
   return (
-    <div className="space-y-6">
-      <header className="mb-8">
-        <Typography variant="eyebrow">
-          {t('YOUR PRIVATE TRANSCRIPTION SPACE')}
-        </Typography>
-        <Typography className="mt-3 text-4xl" variant="title">
-          {t('Less typing.')}
-          <br />
-          <span className="text-accent">{t('More possibility.')}</span>
-        </Typography>
-        <Typography className="mt-4 max-w-lg" variant="body">
-          {t('Turn audio and video into text, entirely on your computer.')}
+    <div className="space-y-5">
+      <header>
+        <Typography variant="title">{t('New transcription')}</Typography>
+        <Typography className="mt-2" variant="body">
+          {t('Transcribe an audio or video file on your computer.')}
         </Typography>
       </header>
       {!model && (
-        <section className="border-accent/20 bg-accent/10 flex flex-wrap items-center gap-4 rounded-2xl border p-5">
+        <section className="border-accent/20 bg-accent/5 flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
           <div className="min-w-48 flex-1">
-            <Typography
-              className="text-sm font-semibold"
-              variant="sectionTitle"
-            >
-              {t('A little setup. Then you’re offline.')}
+            <Typography variant="sectionTitle">
+              {t('Select a model to get started')}
             </Typography>
-            <p className="text-ink/70 mt-1 text-sm leading-5">
-              {t('Add a speech recognition model once to get started.')}
-            </p>
+            <Typography className="mt-1" variant="caption">
+              {t('Use a local model or download one from Models.')}
+            </Typography>
           </div>
           <Button icon="layers-outline" onClick={onModels}>
             {t('Set up a model')}
@@ -90,127 +81,74 @@ const FileSelectionScreen = ({
         </section>
       )}
       <section
-        aria-label={t('Recording')}
+        aria-label={t('Recording and settings')}
         className="border-ink/12 bg-surface overflow-hidden rounded-2xl border shadow-xs"
       >
-        <div className="border-ink/12 flex items-center justify-between border-b px-6 py-4">
-          <Typography className="text-sm font-semibold" variant="sectionTitle">
-            <span className="text-ink/45 mr-3">01</span>
-            {t('Your recording')}
-          </Typography>
-          <span className="text-ink/70 text-xs">{t('Audio or video')}</span>
+        <div className="px-5 pt-5">
+          <Typography variant="sectionTitle">{t('Recording')}</Typography>
         </div>
         <div
           className={cn(
-            'border-ink/25 bg-canvas/50 hover:border-accent/50 m-5 rounded-xl border',
-            'border-dashed p-7 text-center transition-colors',
+            'border-ink/20 bg-canvas/50 m-5 flex min-h-40 flex-wrap items-center justify-center gap-4 rounded-xl border border-dashed p-5',
+            !isDisabled && 'hover:border-accent/50 transition-colors',
           )}
           id="file-dropzone"
           onDragOver={(event) => event.preventDefault()}
         >
-          {file ? (
-            <>
-              <div
-                className={cn(
-                  'border-ink/12 bg-surface text-accent mx-auto mb-4 grid size-14',
-                  'place-items-center rounded-2xl border',
-                )}
-              >
-                <Icon
-                  className="size-7"
-                  name={
-                    file.type === 'video' ? 'file-document-outline' : 'waveform'
-                  }
-                />
-              </div>
-              <p
-                className="mx-auto max-w-lg truncate text-base font-medium"
-                title={file.name}
-              >
-                {file.name}
-              </p>
-              <p className="text-ink/70 mt-2 text-xs">
-                {formatSizeUnit(file.size)} · {t('Ready on your computer')}
-              </p>
-              <div className="mt-5 flex justify-center gap-2">
-                <Button
-                  disabled={isDisabled}
-                  icon="folder-outline"
-                  onClick={onPickFile}
-                >
-                  {t('Change file')}
-                </Button>
-                <Button
-                  aria-label={t('Remove selected file')}
-                  disabled={isDisabled}
-                  icon="close"
-                  variant="ghost"
-                  onClick={onClearFile}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div
-                className={cn(
-                  'border-ink/12 bg-surface text-accent mx-auto mb-4 grid size-14',
-                  'place-items-center rounded-2xl border shadow-xs',
-                )}
-              >
-                <Icon className="size-6" name="upload" />
-              </div>
-              <p className="font-medium">
-                {t(
-                  isDropAvailable
-                    ? 'Drop your audio or video here'
-                    : 'Choose an audio or video file',
-                )}
-              </p>
-              <p className="text-ink/70 mt-2 text-xs">
-                MP3, WAV, M4A, MP4, MOV, MKV {t('and more')}
-              </p>
+          <div className="bg-ink/5 text-ink/70 grid size-12 shrink-0 place-items-center rounded-xl">
+            <Icon className="size-6" name={file ? 'waveform' : 'upload'} />
+          </div>
+          <div className="min-w-0 flex-1 basis-48">
+            <p className="truncate text-sm font-medium" title={file?.name}>
+              {file
+                ? file.name
+                : t(
+                    isDropAvailable
+                      ? 'Drop an audio or video file here'
+                      : 'Choose an audio or video file',
+                  )}
+            </p>
+            <Typography className="mt-1" variant="caption">
+              {file
+                ? formatSizeUnit(file.size)
+                : `MP3, WAV, M4A, MP4, MOV, MKV ${t('and more')}`}
+            </Typography>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              disabled={isDisabled}
+              icon="folder-outline"
+              onClick={onPickFile}
+            >
+              {t(file ? 'Change file' : 'Choose file')}
+            </Button>
+            {file && (
               <Button
-                className="mt-5"
+                aria-label={t('Remove selected file')}
+                className="px-2"
                 disabled={isDisabled}
-                icon="plus"
-                onClick={onPickFile}
-              >
-                {t('Choose file')}
-              </Button>
-            </>
-          )}
+                icon="close"
+                variant="ghost"
+                onClick={onClearFile}
+              />
+            )}
+          </div>
         </div>
-        <p className="text-ink/70 mb-5 flex items-center justify-center gap-2 text-xs">
-          <Icon className="size-3.5" name="shield-check-outline" />
-          {t('No uploads. Your files stay yours.')}
-        </p>
-      </section>
-      <section className="border-ink/12 bg-surface rounded-2xl border p-6 shadow-xs">
-        <Typography
-          className="mb-5 text-sm font-semibold"
-          variant="sectionTitle"
-        >
-          <span className="text-ink/45 mr-3">02</span>
-          {t('Make it yours')}
-        </Typography>
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="border-ink/12 grid gap-4 border-t p-5 sm:grid-cols-2">
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label
-                className="text-ink/70 text-xs font-medium"
-                htmlFor="model-select"
-              >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label className="text-sm font-medium" htmlFor="model-select">
                 {t('Speech model')}
               </label>
               <button
-                className="text-accent text-xs font-medium hover:underline"
+                className="text-accent text-xs hover:underline"
                 type="button"
                 onClick={onModels}
               >
                 {t('Manage models')}
               </button>
             </div>
-            <select
+            <Select
               disabled={isDisabled || !availableModels.length}
               id="model-select"
               value={model?.id ?? ''}
@@ -218,27 +156,22 @@ const FileSelectionScreen = ({
                 onPreferences(event.target.value, state.preferences.language)
               }
             >
-              {!model && (
-                <option value="">{t('Add a model to get started')}</option>
-              )}
+              {!model && <option value="">{t('Select a model')}</option>}
               {availableModels.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
               ))}
-            </select>
-            <p className="text-ink/70 mt-2 text-xs">
-              {t(model ? 'Available offline' : 'Models turn speech into text.')}
-            </p>
+            </Select>
           </div>
           <div>
             <label
-              className="text-ink/70 mb-2 block text-xs font-medium"
+              className="mb-2 block text-sm font-medium"
               htmlFor="language-select"
             >
               {t('Spoken language')}
             </label>
-            <select
+            <Select
               disabled={isDisabled || !model}
               id="language-select"
               value={state.preferences.language}
@@ -253,23 +186,20 @@ const FileSelectionScreen = ({
                     : (languageNames.of(language.code) ?? language.name)}
                 </option>
               ))}
-            </select>
-            <p className="text-ink/70 mt-2 text-xs">
-              {t('Choose the language spoken in your recording.')}
-            </p>
+            </Select>
           </div>
         </div>
       </section>
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-3">
-        <p className="text-ink/70 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Typography variant="caption">
           {t(
             !file
               ? 'Choose a recording to continue.'
               : !model
-                ? 'Add a model to continue.'
-                : 'Everything is ready. Let’s transcribe.',
+                ? 'Select a model to continue.'
+                : 'Ready to transcribe.',
           )}
-        </p>
+        </Typography>
         <Button
           disabled={isDisabled || !file || !model}
           icon="arrow-right"

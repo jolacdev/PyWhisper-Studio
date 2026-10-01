@@ -2,17 +2,16 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@components/Button';
-import Icon from '@components/Icon';
+import Select from '@components/Select';
 import Typography from '@components/Typography';
 import { cn } from '@utils/cn';
 import type { PyWebViewApi, Transcript } from 'types/pywebview/pywebview-api';
 
 type ExportFormat = Parameters<PyWebViewApi['export_transcript']>[1];
-
 type FileTranscriptionScreenProps = {
   transcript: Transcript;
   isDisabled: boolean;
-  onCopy: () => void;
+  onCopy: (text: string) => void;
   onExport: (format: ExportFormat) => void;
   onNew: () => void;
 };
@@ -30,7 +29,7 @@ const formatTime = (value: number) => {
     .join(':');
 };
 
-/** Present a read-only transcript with timed segments and explicit export actions. */
+/** Present a readable document with optional timestamp rows and copy actions. */
 const FileTranscriptionScreen = ({
   onCopy,
   onExport,
@@ -46,128 +45,128 @@ const FileTranscriptionScreen = ({
     new Intl.DisplayNames([i18n.language], { type: 'language' }).of(
       transcript.language,
     ) ?? transcript.language;
+  const fullText = transcript.segments
+    .map((segment) => segment.text.trim())
+    .join(' ');
   return (
-    <div className="space-y-6">
-      <header>
-        <Typography variant="eyebrow">
-          {t('FROM SOUND TO SOMETHING USEFUL')}
-        </Typography>
-        <div className="mt-3 flex items-center gap-3">
-          <Typography variant="title">
-            {t(hasSpeech ? 'Your words, ready.' : 'No speech detected.')}
+    <div className="flex min-h-0 flex-1 flex-col gap-5">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <Typography variant="title">{t('Transcript')}</Typography>
+          <p
+            className="mt-2 truncate text-sm font-medium"
+            title={transcript.file.name}
+          >
+            {transcript.file.name}
+          </p>
+          <Typography className="mt-1 capitalize" variant="caption">
+            {formatTime(transcript.duration)} · {languageName}
           </Typography>
-          <span className="bg-accent/10 text-accent grid size-8 place-items-center rounded-full">
-            <Icon className="size-4" name="check" />
-          </span>
         </div>
-        <p
-          className="text-ink/70 mt-3 truncate text-sm"
-          title={transcript.file.name}
+        <Button
+          disabled={isDisabled}
+          icon="plus"
+          variant="ghost"
+          onClick={onNew}
         >
-          {transcript.file.name}
-        </p>
-        <div className="text-ink/70 mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs">
-          <span className="inline-flex items-center gap-1.5">
-            <Icon className="size-3.5" name="clock-outline" />
-            {formatTime(transcript.duration)}
-          </span>
-          <span className="capitalize">{languageName}</span>
-          <span>
-            {transcript.segments.length} {t('segments')}
-          </span>
-        </div>
+          {t('New transcription')}
+        </Button>
       </header>
       {hasSpeech ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div
-              aria-label={t('Transcript display')}
-              className="border-ink/12 bg-surface flex rounded-xl border p-1"
-              role="group"
-            >
-              <button
-                aria-pressed={!isTimed}
-                className={cn(
-                  'rounded-lg px-4 py-2 text-xs font-semibold',
-                  !isTimed ? 'bg-ink/5 text-ink' : 'text-ink/70',
-                )}
-                type="button"
-                onClick={() => setIsTimed(false)}
-              >
-                {t('Text')}
-              </button>
-              <button
-                aria-pressed={isTimed}
-                className={cn(
-                  'rounded-lg px-4 py-2 text-xs font-semibold',
-                  isTimed ? 'bg-ink/5 text-ink' : 'text-ink/70',
-                )}
-                type="button"
-                onClick={() => setIsTimed(true)}
-              >
-                {t('Timestamps')}
-              </button>
-            </div>
-            <Button disabled={isDisabled} icon="content-copy" onClick={onCopy}>
-              {t('Copy text')}
-            </Button>
-          </div>
-          <article
+          <section
             aria-label={t('Transcript')}
-            className="border-ink/12 bg-surface min-h-60 rounded-2xl border p-6 shadow-xs sm:p-8"
+            className="border-ink/12 bg-surface flex min-h-40 flex-1 flex-col overflow-hidden rounded-2xl border shadow-xs"
           >
+            <div className="border-ink/12 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+              <div
+                aria-label={t('Transcript display')}
+                className="bg-ink/5 flex rounded-xl p-1"
+                role="group"
+              >
+                {[false, true].map((mode) => (
+                  <button
+                    key={String(mode)}
+                    aria-pressed={isTimed === mode}
+                    className={cn(
+                      'min-h-8 rounded-lg px-3 text-sm font-medium transition-colors',
+                      isTimed === mode
+                        ? 'bg-surface text-ink shadow-xs'
+                        : 'text-ink/70 hover:text-ink',
+                    )}
+                    type="button"
+                    onClick={() => setIsTimed(mode)}
+                  >
+                    {t(mode ? 'Timestamps' : 'Text')}
+                  </button>
+                ))}
+              </div>
+              <Button
+                disabled={isDisabled}
+                icon="content-copy"
+                variant="ghost"
+                onClick={() => onCopy(fullText)}
+              >
+                {t('Copy text')}
+              </Button>
+            </div>
             {isTimed ? (
-              <ol className="space-y-6">
+              <ol className="divide-ink/8 min-h-0 divide-y overflow-y-auto p-2">
                 {transcript.segments.map((segment) => (
                   <li
                     key={segment.id}
-                    className="grid grid-cols-[5rem_1fr] gap-4"
+                    className={cn(
+                      'group hover:bg-ink/3 focus-within:bg-ink/3 grid grid-cols-[4.5rem_minmax(0,1fr)_2.5rem]',
+                      'items-baseline gap-3 rounded-lg px-3 py-2.5 transition-colors',
+                    )}
                   >
-                    <span className="text-accent pt-1 font-mono text-xs">
+                    <span className="text-ink/60 font-mono text-xs leading-7 tabular-nums">
                       {formatTime(segment.start)}
                     </span>
                     <p className="min-w-0 text-[15px] leading-7 break-words whitespace-pre-wrap">
                       {segment.text}
                     </p>
+                    <Button
+                      aria-label={t('Copy segment at {{time}}', {
+                        time: formatTime(segment.start),
+                      })}
+                      className="text-ink/50 hover:text-ink self-start px-2"
+                      disabled={isDisabled}
+                      icon="content-copy"
+                      title={t('Copy segment')}
+                      variant="ghost"
+                      onClick={() => onCopy(segment.text)}
+                    />
                   </li>
                 ))}
               </ol>
             ) : (
-              <div className="space-y-5 text-[15px] leading-8 break-words whitespace-pre-wrap">
-                {transcript.segments.map((segment) => (
-                  <p key={segment.id}>{segment.text}</p>
-                ))}
-              </div>
+              <article className="mx-auto w-full max-w-prose overflow-y-auto p-6 text-[15px] leading-7 break-words sm:p-7">
+                <p>{fullText}</p>
+              </article>
             )}
-          </article>
-          <div className="flex flex-wrap items-end justify-between gap-5">
-            <Typography className="max-w-xs" variant="caption">
-              {t(
-                'Export to keep a copy. Transcripts are not saved when you close the app or start another transcription.',
-              )}
+          </section>
+          <footer className="flex flex-wrap items-center justify-between gap-3">
+            <Typography className="max-w-sm" variant="caption">
+              {t('Export to keep this transcript after closing the app.')}
             </Typography>
-            <div className="flex items-end gap-2">
-              <div>
-                <label
-                  className="text-ink/70 mb-1.5 block text-xs"
-                  htmlFor="export-format"
-                >
-                  {t('Export format')}
-                </label>
-                <select
-                  className="min-w-32"
-                  disabled={isDisabled}
-                  id="export-format"
-                  value={format}
-                  onChange={(event) =>
-                    setFormat(event.target.value as ExportFormat)
-                  }
-                >
-                  <option value="txt">TXT · {t('Plain text')}</option>
-                  <option value="srt">SRT · {t('Subtitles')}</option>
-                  <option value="vtt">VTT · {t('Web subtitles')}</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-2">
+              <label className="sr-only" htmlFor="export-format">
+                {t('Export format')}
+              </label>
+              <Select
+                className="w-24"
+                disabled={isDisabled}
+                id="export-format"
+                value={format}
+                onChange={(event) =>
+                  setFormat(event.target.value as ExportFormat)
+                }
+              >
+                <option value="txt">TXT</option>
+                <option value="srt">SRT</option>
+                <option value="vtt">VTT</option>
+              </Select>
               <Button
                 disabled={isDisabled}
                 icon="download"
@@ -177,26 +176,20 @@ const FileTranscriptionScreen = ({
                 {t('Export')}
               </Button>
             </div>
-          </div>
+          </footer>
         </>
       ) : (
-        <section className="border-ink/12 bg-surface rounded-2xl border p-10 text-center">
-          <Icon className="text-ink/45 mx-auto mb-4 size-10" name="waveform" />
-          <Typography className="font-medium" variant="sectionTitle">
-            {t('The file was processed successfully.')}
+        <section className="border-ink/12 bg-surface rounded-2xl border p-8">
+          <Typography variant="sectionTitle">
+            {t('No speech detected.')}
           </Typography>
-          <Typography className="mx-auto mt-3 max-w-md" variant="body">
+          <Typography className="mt-2 max-w-lg" variant="body">
             {t(
-              'Check that the recording contains clear speech. You can try another model or select the spoken language manually.',
+              'The file was processed successfully. Check that it contains clear speech, or try another model or spoken language.',
             )}
           </Typography>
         </section>
       )}
-      <div className="border-ink/12 border-t pt-5">
-        <Button icon="plus" variant="ghost" onClick={onNew}>
-          {t('Transcribe another file')}
-        </Button>
-      </div>
     </div>
   );
 };

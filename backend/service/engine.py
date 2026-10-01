@@ -3,7 +3,7 @@ from pathlib import Path
 from threading import Event
 from typing import Protocol, TypedDict
 
-from schemas.studio import EngineInfo, ModelInfo
+from schemas.app_state import EngineInfo, ModelInfo
 from schemas.transcription import TranscriptionSegment
 
 ProgressCallback = Callable[[float | None, str], None]

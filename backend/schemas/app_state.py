@@ -56,6 +56,7 @@ class Job(TypedDict):
     kind: JobKind
     status: JobStatus
     progress: float | None
+    remainingSeconds: float | None
     message: str
     error: str | None
     modelId: str
@@ -92,4 +93,4 @@ class AppState(TypedDict):
 class BridgeState(TypedDict):
     """Define the shared state contract generated alongside the API."""
 
-    studio: AppState
+    app: AppState

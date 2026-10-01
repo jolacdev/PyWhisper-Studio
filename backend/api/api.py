@@ -9,9 +9,9 @@ import webview
 from webview.dom import DOMEventHandler
 from webview.dom.element import Element
 
+from schemas.app_state import AppState, ExportFormat, InterfaceLanguage, Job, ModelInfo, Theme, Transcript
 from schemas.file_metadata import FileMetadata
-from schemas.studio import AppState, ExportFormat, InterfaceLanguage, Job, ModelInfo, Theme, Transcript
-from service.studio_service import StudioService
+from service.transcription_service import TranscriptionService
 from utils.export_utils import render_transcript
 from utils.media_utils import get_media_dialog_file_types
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class PyWebViewApi:
     """Expose typed commands and native dialogs while the service owns application state."""
 
-    def __init__(self, service: StudioService) -> None:
+    def __init__(self, service: TranscriptionService) -> None:
         """Inject the application service so another engine needs no bridge changes."""
         self._service = service
         self._window: webview.Window | None = None
@@ -31,8 +31,8 @@ class PyWebViewApi:
         """Publish one top-level property because pywebview does not track nested mutations."""
         self._window = window
         window.events.loaded += self._reset_dropzone
-        self._service.subscribe(lambda state: setattr(window.state, "studio", state))
-        window.state.studio = self._service.snapshot()
+        self._service.subscribe(lambda state: setattr(window.state, "app", state))
+        window.state.app = self._service.snapshot()
 
     def _reset_dropzone(self) -> None:
         """Discard DOM references when the page reloads and pywebview clears its elements."""
@@ -58,6 +58,10 @@ class PyWebViewApi:
     def clear_file(self) -> None:
         """Clear the pending input without deleting the user's file."""
         self._service.select_file(None)
+
+    def refresh_file(self) -> FileMetadata | None:
+        """Refresh the pending file's availability independently of any completed result."""
+        return self._service.refresh_file()
 
     def set_preferences(self, model_id: str, language: str) -> None:
         """Persist the selected local model and spoken language."""

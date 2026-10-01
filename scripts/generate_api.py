@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from api.api import PyWebViewApi  # noqa: E402
-from schemas.studio import BridgeState  # noqa: E402
+from schemas.app_state import BridgeState  # noqa: E402
 
 
 def generate() -> str:

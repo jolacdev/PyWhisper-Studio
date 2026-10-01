@@ -1,5 +1,20 @@
 import os
 import sys
+from typing import cast
+
+import webview
+
+if sys.platform == "darwin":
+    from AppKit import NSWindow, NSWindowTabbingModeDisallowed, NSWindowTitleHidden
+
+
+def configure_native_window(window: webview.Window) -> None:
+    """Keep macOS window controls native and show branding only in the application sidebar."""
+    if sys.platform == "darwin":
+        # Run before_show on Cocoa's main thread; avoid duplicate or clipped native title/tab labels.
+        native = cast(NSWindow, window.native)
+        native.setTabbingMode_(NSWindowTabbingModeDisallowed)
+        native.setTitleVisibility_(NSWindowTitleHidden)
 
 
 def is_running_bundled() -> bool:

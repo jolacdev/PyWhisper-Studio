@@ -1,8 +1,8 @@
 import type { BridgeState } from './pywebview-api';
 
 export type PyWebViewStateEvent = CustomEvent<{
-  key: 'studio';
-  value: BridgeState['studio'];
+  key: 'app';
+  value: BridgeState['app'];
 }>;
 
 /** Add transport events to the state generated from Python. */

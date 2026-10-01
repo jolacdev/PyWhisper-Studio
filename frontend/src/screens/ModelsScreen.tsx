@@ -40,13 +40,10 @@ const ModelsScreen = ({
   return (
     <div className="space-y-6">
       <header>
-        <Typography variant="eyebrow">{t('A ONE-TIME SETUP')}</Typography>
-        <Typography className="mt-3" variant="title">
-          {t('A model for your words.')}
-        </Typography>
+        <Typography variant="title">{t('Models')}</Typography>
         <Typography className="mt-3 max-w-xl" variant="body">
           {t(
-            'A model is a speech recognition pack. Download one once, then transcribe without an internet connection.',
+            'A model recognises speech in your recordings. Use a local folder or download a model to transcribe offline.',
           )}
         </Typography>
       </header>
@@ -68,7 +65,7 @@ const ModelsScreen = ({
       </section>
       <div className="flex items-center justify-between gap-3">
         <Typography className="text-sm font-semibold" variant="sectionTitle">
-          {t('Choose your balance of speed and accuracy')}
+          {t('Available models')}
         </Typography>
         <Button
           aria-label={t('Refresh local models')}
@@ -114,10 +111,10 @@ const ModelsScreen = ({
                 >
                   {t(
                     model.isAvailable
-                      ? 'ON YOUR COMPUTER'
+                      ? 'Available locally'
                       : model.isRecommended
-                        ? 'START HERE'
-                        : 'DOWNLOAD',
+                        ? 'Recommended'
+                        : 'Not downloaded',
                   )}
                 </span>
               </div>
@@ -165,49 +162,77 @@ const ModelsScreen = ({
       </div>
       <details className="border-ink/12 bg-surface rounded-xl border px-5 py-4 text-sm">
         <summary className="cursor-pointer font-medium">
-          {t('Storage, compatibility and download sources')}
+          {t('Where are models stored, and which folders can I use?')}
         </summary>
-        <div className="text-ink/70 mt-4 space-y-4 text-xs leading-6">
-          <p>{t(state.engine.modelFormat)}</p>
-          <p>
-            {t(
-              'Downloads come from the sources listed below. Your recordings are never sent there.',
-            )}
-          </p>
-          <p>
-            {t(
-              'Larger models need more memory and run more slowly. Download sizes are approximate. This version processes audio on the CPU.',
-            )}
-          </p>
-          <div>
-            <span>{t('Managed model folder')}</span>
-            <code className="bg-canvas mt-1 block rounded-lg p-3 break-all">
+        <div className="mt-5 space-y-5">
+          <section>
+            <Typography variant="subtitle">
+              {t('Models downloaded by the app')}
+            </Typography>
+            <Typography className="mt-1" variant="caption">
+              {t(
+                'Downloads are saved here automatically. You do not need to move or unpack them.',
+              )}
+            </Typography>
+            <code className="bg-canvas text-ink/70 mt-2 block rounded-lg p-3 text-xs break-all">
               {state.modelsDirectory}
             </code>
             <Button
-              className="mt-3"
+              className="mt-2"
               icon="folder-outline"
               onClick={onOpenFolder}
             >
               {t('Open folder')}
             </Button>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1">
-            {state.models
-              .filter((model) => model.sourceUrl)
-              .map((model) => (
-                <a
-                  key={model.id}
-                  className="text-accent inline-flex items-center gap-1 underline underline-offset-4"
-                  href={model.sourceUrl}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  {model.name}
-                  <Icon className="size-3" name="open-in-new" />
-                </a>
-              ))}
-          </div>
+          </section>
+          <section>
+            <Typography variant="subtitle">
+              {t('Using a model you already have')}
+            </Typography>
+            <Typography className="mt-1" variant="caption">
+              {t(
+                'Choose the folder containing the model files, not the parent downloads folder. The files stay in their original location.',
+              )}
+            </Typography>
+            <Typography className="mt-2" variant="caption">
+              {t(state.engine.modelFormat)}
+            </Typography>
+          </section>
+          <section>
+            <Typography variant="subtitle">{t('Choosing a model')}</Typography>
+            <Typography className="mt-1" variant="caption">
+              {t(
+                'Start with Base for general use or Tiny for speed. Larger models need more memory and processing time. Sizes shown are approximate downloads.',
+              )}
+            </Typography>
+            <Typography className="mt-2" variant="caption">
+              {t('This version processes audio on the CPU.')}
+            </Typography>
+          </section>
+          <section>
+            <Typography variant="subtitle">{t('Download sources')}</Typography>
+            <Typography className="mt-1" variant="caption">
+              {t(
+                'The app downloads model files from these pages. Your recordings are never uploaded.',
+              )}
+            </Typography>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+              {state.models
+                .filter((model) => model.sourceUrl)
+                .map((model) => (
+                  <a
+                    key={model.id}
+                    className="text-accent inline-flex items-center gap-1 text-xs underline underline-offset-4"
+                    href={model.sourceUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    {model.name}
+                    <Icon className="size-3" name="open-in-new" />
+                  </a>
+                ))}
+            </div>
+          </section>
         </div>
       </details>
       {hasModel && (

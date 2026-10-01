@@ -21,13 +21,14 @@ export const createPyWebViewMock = () => {
     kind: 'transcription',
     message: '',
     progress: null,
+    remainingSeconds: null,
     startedAt: '',
     status: 'idle',
   };
   const models: ModelInfo[] = [
     {
       id: 'base',
-      description: 'A good place to start. Light and quick.',
+      description: 'Balanced speed and accuracy for general use.',
       name: 'Base',
       path: scenario === 'ready' ? '/Preview/models/base' : null,
       sizeLabel: '≈145 MB',
@@ -37,7 +38,7 @@ export const createPyWebViewMock = () => {
     },
     {
       id: 'tiny',
-      description: 'Fast drafts and short recordings.',
+      description: 'Fast transcription with lower resource requirements.',
       name: 'Tiny',
       path: null,
       sizeLabel: '≈75 MB',
@@ -47,7 +48,7 @@ export const createPyWebViewMock = () => {
     },
     {
       id: 'small',
-      description: 'More accurate, with a little more patience.',
+      description: 'Higher accuracy with moderate processing time.',
       name: 'Small',
       path: null,
       sizeLabel: '≈485 MB',
@@ -87,7 +88,7 @@ export const createPyWebViewMock = () => {
   const emit = () => {
     state = structuredClone({ ...state, revision: state.revision + 1 });
     const event = new CustomEvent('change', {
-      detail: { key: 'studio' as const, value: state },
+      detail: { key: 'app' as const, value: state },
     });
     listeners.forEach((listener) => listener(event));
   };
@@ -119,12 +120,15 @@ export const createPyWebViewMock = () => {
       if (state.job.status === 'cancelling') {
         clearInterval(interval);
         state.job.status = 'cancelled';
+        state.job.remainingSeconds = null;
         emit();
         return;
       }
       step += 1;
       state.job.status = 'running';
       state.job.progress = kind === 'download' ? null : step * 20;
+      state.job.remainingSeconds =
+        kind === 'transcription' && step > 1 ? (5 - step) * 0.6 : null;
       state.job.message =
         kind === 'download'
           ? `model.bin · ${step}/5`
@@ -132,6 +136,7 @@ export const createPyWebViewMock = () => {
       if (step >= 5) {
         clearInterval(interval);
         state.job.status = 'completed';
+        state.job.remainingSeconds = null;
         state.job.progress = 100;
         if (kind === 'download') {
           state.models = state.models.map((model) =>
@@ -218,6 +223,7 @@ export const createPyWebViewMock = () => {
       Promise.reject(
         new Error('Native folders are available in the desktop app.'),
       ),
+    refresh_file: () => Promise.resolve(state.transcriptionFile),
     refresh_models: () => Promise.resolve(),
     run_transcription: (_path, modelId, language = 'auto') => {
       state.preferences.language = language;
@@ -259,10 +265,10 @@ export const createPyWebViewMock = () => {
     api,
     state: {
       addEventListener: (_type, callback) => listeners.add(callback),
-      removeEventListener: (_type, callback) => listeners.delete(callback),
-      get studio() {
+      get app() {
         return state;
       },
+      removeEventListener: (_type, callback) => listeners.delete(callback),
     },
   };
 };

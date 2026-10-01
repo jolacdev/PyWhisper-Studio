@@ -196,7 +196,7 @@ export default [
         2,
         {
           custom: 'ignore',
-          exceptions: ['button', 'svg'],
+          exceptions: ['button', 'select', 'svg'],
         },
       ],
 

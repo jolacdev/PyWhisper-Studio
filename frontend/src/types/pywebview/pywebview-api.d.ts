@@ -5,6 +5,7 @@ export type Job = {
   kind: "transcription" | "download";
   status: "idle" | "loading" | "running" | "cancelling" | "completed" | "cancelled" | "error";
   progress: number | null;
+  remainingSeconds: number | null;
   message: string;
   error: string | null;
   modelId: string;
@@ -80,7 +81,7 @@ export type TranscriptionSegment = {
 };
 
 export type BridgeState = {
-  studio: AppState;
+  app: AppState;
 };
 
 export interface PyWebViewApi {
@@ -93,6 +94,7 @@ export interface PyWebViewApi {
   get_transcript(job_id: string): Promise<Transcript>;
   open_file_dialog(): Promise<FileMetadata | null>;
   open_models_folder(): Promise<void>;
+  refresh_file(): Promise<FileMetadata | null>;
   refresh_models(): Promise<void>;
   run_transcription(file_path: string, model_name: string, language?: string): Promise<Job>;
   select_model_folder(): Promise<ModelInfo | null>;

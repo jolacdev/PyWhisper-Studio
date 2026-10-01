@@ -14,7 +14,9 @@
 - Use Tailwind for components; CSS for setup, five palette roles, native control defaults, and shared animation.
 - Keep short classes inline. Split long lists into a few `cn` strings, grouped roughly as layout → surfaces/spacing → typography → interaction.
 - `cn` uses `clsx` and `tailwind-merge`; Prettier sorts its strings. Use opacity variants rather than adding muted, border, or hover color tokens.
-- Use shared `Typography`, `Button`, `Icon`, and feedback components. Keep primitives independent of backend commands.
+- Use shared `Typography`, `Button`, `Select`, `Icon`, and feedback components. Keep primitives independent of backend commands.
+- Prefer direct, professional copy. Avoid slogans and decorative success indicators; keep the document and its actions prominent.
+- Use floating toasts for action feedback; errors stay dismissible until resolved. Keep ongoing task progress in the workspace.
 - Register only MDI icons in `Icon`, using source slugs and a typed name union. ESLint blocks direct MDI imports and inline interface SVGs elsewhere.
 - Prefer native buttons, selects, labels, and headings. Give icon buttons accessible names; preserve keyboard focus, contrast, and reduced motion.
 - Support English and Spanish from Spain. Translate UI copy in both locale files; code and comments stay English. UI language is independent of spoken language.

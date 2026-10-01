@@ -4,7 +4,7 @@ import type { AppState, Transcript } from 'types/pywebview/pywebview-api';
 import type { PyWebViewStateEvent } from 'types/pywebview/pywebview-state';
 
 /** Subscribe once, hydrate on readiness, and reject stale snapshot responses. */
-export const useStudio = () => {
+export const useTranscription = () => {
   const [state, setState] = useState<AppState | null>(null);
   const [transcript, setTranscript] = useState<null | Transcript>(null);
   const [error, setError] = useState<null | string>(null);
@@ -20,7 +20,7 @@ export const useStudio = () => {
       }
     };
     const handleChange = (event: PyWebViewStateEvent) => {
-      if (event.detail.key === 'studio') {
+      if (event.detail.key === 'app') {
         accept(event.detail.value);
       }
     };
@@ -85,6 +85,5 @@ export const useStudio = () => {
     state,
     transcript: transcript?.id === transcriptId ? transcript : null,
     isPending,
-    clearError: () => setError(null),
   };
 };

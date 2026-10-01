@@ -1,6 +1,8 @@
 import {
   mdiArrowRight,
   mdiCheck,
+  mdiChevronDown,
+  mdiChevronRight,
   mdiClockOutline,
   mdiClose,
   mdiContentCopy,
@@ -24,6 +26,8 @@ import {
 const icons = {
   'arrow-right': mdiArrowRight,
   check: mdiCheck,
+  'chevron-down': mdiChevronDown,
+  'chevron-right': mdiChevronRight,
   'clock-outline': mdiClockOutline,
   close: mdiClose,
   'content-copy': mdiContentCopy,
