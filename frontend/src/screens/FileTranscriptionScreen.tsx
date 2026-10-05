@@ -1,19 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@components/Button';
 import Select from '@components/Select';
 import Typography from '@components/Typography';
 import { cn } from '@utils/cn';
+import { formatSizeUnit } from '@utils/formatSizeUnit';
 import type { PyWebViewApi, Transcript } from 'types/pywebview/pywebview-api';
 
 type ExportFormat = Parameters<PyWebViewApi['export_transcript']>[1];
 type FileTranscriptionScreenProps = {
   transcript: Transcript;
   isDisabled: boolean;
-  onCopy: (text: string) => void;
+  onCopy: (text: string) => Promise<void>;
   onExport: (format: ExportFormat) => void;
-  onNew: () => void;
 };
 
 /** Format display timestamps without changing the original export precision. */
@@ -29,16 +29,36 @@ const formatTime = (value: number) => {
     .join(':');
 };
 
-/** Present a readable document with optional timestamp rows and copy actions. */
+/** Present timed segments alongside the source file and actual processing details. */
 const FileTranscriptionScreen = ({
   onCopy,
   onExport,
-  onNew,
   transcript,
   isDisabled,
 }: FileTranscriptionScreenProps) => {
   const { i18n, t } = useTranslation();
-  const [isTimed, setIsTimed] = useState(false);
+  const [copied, setCopied] = useState<null | string>(null);
+  const copyTimer = useRef<null | number>(null);
+  useEffect(
+    () => () => {
+      if (copyTimer.current !== null) {
+        window.clearTimeout(copyTimer.current);
+      }
+    },
+    [],
+  );
+  const copy = async (id: string, text: string) => {
+    try {
+      await onCopy(text);
+      setCopied(id);
+      if (copyTimer.current !== null) {
+        window.clearTimeout(copyTimer.current);
+      }
+      copyTimer.current = window.setTimeout(() => setCopied(null), 1600);
+    } catch {
+      // The parent displays clipboard errors in the shared notification area.
+    }
+  };
   const [format, setFormat] = useState<ExportFormat>('txt');
   const hasSpeech = transcript.segments.length > 0;
   const languageName =
@@ -48,111 +68,128 @@ const FileTranscriptionScreen = ({
   const fullText = transcript.segments
     .map((segment) => segment.text.trim())
     .join(' ');
+  const details = [
+    {
+      label: t('transcript.fileSize'),
+      value: formatSizeUnit(transcript.file.size),
+    },
+    {
+      label: t('transcript.recordingLength'),
+      value: formatTime(transcript.duration),
+    },
+    {
+      hint: t('transcript.processingHint'),
+      label: t('transcript.processingTime'),
+      value: formatTime(Math.round(transcript.processingSeconds)),
+    },
+    { label: t('transcript.model'), value: transcript.modelName },
+    { label: t('transcript.language'), value: languageName },
+    { label: t('transcript.engine'), value: transcript.engineName },
+  ];
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <Typography variant="title">{t('Transcript')}</Typography>
-          <p
-            className="mt-2 truncate text-sm font-medium"
-            title={transcript.file.name}
-          >
-            {transcript.file.name}
-          </p>
-          <Typography className="mt-1 capitalize" variant="caption">
-            {formatTime(transcript.duration)} · {languageName}
-          </Typography>
-        </div>
-        <Button
-          disabled={isDisabled}
-          icon="plus"
-          variant="ghost"
-          onClick={onNew}
+      <header className="shrink-0">
+        <Typography variant="title">{t('transcript.title')}</Typography>
+        <p
+          className="mt-2 text-sm font-medium break-words"
+          title={transcript.file.absolutePath}
         >
-          {t('New transcription')}
-        </Button>
+          {transcript.file.name}
+        </p>
+        <dl className="border-ink/12 mt-4 grid grid-cols-2 gap-x-6 gap-y-3 border-t pt-4 sm:grid-cols-3">
+          {details.map((detail) => (
+            <div key={detail.label} className="min-w-0" title={detail.hint}>
+              <dt className="text-ink/60 text-xs">{detail.label}</dt>
+              <dd className="mt-1 text-sm font-medium break-words">
+                {detail.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </header>
       {hasSpeech ? (
         <>
           <section
-            aria-label={t('Transcript')}
+            aria-label={t('transcript.title')}
             className="border-ink/12 bg-surface flex min-h-40 flex-1 flex-col overflow-hidden rounded-2xl border shadow-xs"
           >
-            <div className="border-ink/12 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-              <div
-                aria-label={t('Transcript display')}
-                className="bg-ink/5 flex rounded-xl p-1"
-                role="group"
-              >
-                {[false, true].map((mode) => (
-                  <button
-                    key={String(mode)}
-                    aria-pressed={isTimed === mode}
-                    className={cn(
-                      'min-h-8 rounded-lg px-3 text-sm font-medium transition-colors',
-                      isTimed === mode
-                        ? 'bg-surface text-ink shadow-xs'
-                        : 'text-ink/70 hover:text-ink',
-                    )}
-                    type="button"
-                    onClick={() => setIsTimed(mode)}
-                  >
-                    {t(mode ? 'Timestamps' : 'Text')}
-                  </button>
-                ))}
-              </div>
+            <div className="border-ink/12 flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2">
+              <p className="text-ink/70 text-xs">
+                {t('transcript.segmentCount', {
+                  count: transcript.segments.length,
+                })}
+              </p>
               <Button
+                aria-label={t(
+                  copied === 'full'
+                    ? 'transcript.copied'
+                    : 'transcript.copyText',
+                )}
+                className={cn(
+                  'size-10 shrink-0 px-2',
+                  copied === 'full' && 'copy-confirmation',
+                )}
                 disabled={isDisabled}
-                icon="content-copy"
+                icon={copied === 'full' ? 'check' : 'content-copy'}
+                title={t(
+                  copied === 'full'
+                    ? 'transcript.copied'
+                    : 'transcript.copyText',
+                )}
                 variant="ghost"
-                onClick={() => onCopy(fullText)}
-              >
-                {t('Copy text')}
-              </Button>
+                onClick={() => void copy('full', fullText)}
+              />
             </div>
-            {isTimed ? (
-              <ol className="divide-ink/8 min-h-0 divide-y overflow-y-auto p-2">
-                {transcript.segments.map((segment) => (
-                  <li
-                    key={segment.id}
+            <ol className="divide-ink/8 min-h-0 flex-1 divide-y overflow-y-auto p-2">
+              {transcript.segments.map((segment) => (
+                <li
+                  key={segment.id}
+                  className={cn(
+                    'group hover:bg-ink/3 focus-within:bg-ink/3 grid grid-cols-[4rem_minmax(0,1fr)_2.5rem]',
+                    'items-baseline gap-2 rounded-lg px-2 py-2.5 transition-colors sm:gap-3 sm:px-3',
+                  )}
+                >
+                  <span className="text-ink/60 font-mono text-xs leading-7 tabular-nums">
+                    {formatTime(segment.start)}
+                  </span>
+                  <p className="min-w-0 text-[15px] leading-7 break-words whitespace-pre-wrap">
+                    {segment.text}
+                  </p>
+                  <Button
+                    aria-label={
+                      copied === String(segment.id)
+                        ? t('transcript.copied')
+                        : t('transcript.copySegmentAt', {
+                            time: formatTime(segment.start),
+                          })
+                    }
                     className={cn(
-                      'group hover:bg-ink/3 focus-within:bg-ink/3 grid grid-cols-[4.5rem_minmax(0,1fr)_2.5rem]',
-                      'items-baseline gap-3 rounded-lg px-3 py-2.5 transition-colors',
+                      'text-ink/50 hover:text-ink size-10 self-start px-2',
+                      copied === String(segment.id) && 'copy-confirmation',
                     )}
-                  >
-                    <span className="text-ink/60 font-mono text-xs leading-7 tabular-nums">
-                      {formatTime(segment.start)}
-                    </span>
-                    <p className="min-w-0 text-[15px] leading-7 break-words whitespace-pre-wrap">
-                      {segment.text}
-                    </p>
-                    <Button
-                      aria-label={t('Copy segment at {{time}}', {
-                        time: formatTime(segment.start),
-                      })}
-                      className="text-ink/50 hover:text-ink self-start px-2"
-                      disabled={isDisabled}
-                      icon="content-copy"
-                      title={t('Copy segment')}
-                      variant="ghost"
-                      onClick={() => onCopy(segment.text)}
-                    />
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <article className="mx-auto w-full max-w-prose overflow-y-auto p-6 text-[15px] leading-7 break-words sm:p-7">
-                <p>{fullText}</p>
-              </article>
-            )}
+                    disabled={isDisabled}
+                    icon={
+                      copied === String(segment.id) ? 'check' : 'content-copy'
+                    }
+                    title={t(
+                      copied === String(segment.id)
+                        ? 'transcript.copied'
+                        : 'transcript.copySegment',
+                    )}
+                    variant="ghost"
+                    onClick={() => void copy(String(segment.id), segment.text)}
+                  />
+                </li>
+              ))}
+            </ol>
           </section>
-          <footer className="flex flex-wrap items-center justify-between gap-3">
+          <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3">
             <Typography className="max-w-sm" variant="caption">
-              {t('Export to keep this transcript after closing the app.')}
+              {t('transcript.exportHint')}
             </Typography>
             <div className="flex items-center gap-2">
               <label className="sr-only" htmlFor="export-format">
-                {t('Export format')}
+                {t('transcript.exportFormat')}
               </label>
               <Select
                 className="w-24"
@@ -173,7 +210,7 @@ const FileTranscriptionScreen = ({
                 variant="primary"
                 onClick={() => onExport(format)}
               >
-                {t('Export')}
+                {t('transcript.export')}
               </Button>
             </div>
           </footer>
@@ -181,12 +218,10 @@ const FileTranscriptionScreen = ({
       ) : (
         <section className="border-ink/12 bg-surface rounded-2xl border p-8">
           <Typography variant="sectionTitle">
-            {t('No speech detected.')}
+            {t('transcript.noSpeech')}
           </Typography>
           <Typography className="mt-2 max-w-lg" variant="body">
-            {t(
-              'The file was processed successfully. Check that it contains clear speech, or try another model or spoken language.',
-            )}
+            {t('transcript.noSpeechHint')}
           </Typography>
         </section>
       )}

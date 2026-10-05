@@ -30,14 +30,20 @@ export const createPyWebViewMock = () => {
       id: 'base',
       description: 'Balanced speed and accuracy for general use.',
       name: 'Base',
-      path: scenario === 'ready' ? '/Preview/models/base' : null,
       sizeLabel: '≈145 MB',
       sourceUrl: 'https://huggingface.co/Systran/faster-whisper-base',
-      isAvailable: scenario === 'ready',
+      caches: ['ready', 'models'].includes(scenario ?? '')
+        ? [{ directory: '/Preview/Syllentra/models/base', isShared: false }]
+        : [],
+      path: ['ready', 'models'].includes(scenario ?? '')
+        ? '/Preview/Syllentra/models/base'
+        : null,
+      isAvailable: ['ready', 'models'].includes(scenario ?? ''),
       isRecommended: true,
     },
     {
       id: 'tiny',
+      caches: [],
       description: 'Fast transcription with lower resource requirements.',
       name: 'Tiny',
       path: null,
@@ -48,6 +54,7 @@ export const createPyWebViewMock = () => {
     },
     {
       id: 'small',
+      caches: [],
       description: 'Higher accuracy with moderate processing time.',
       name: 'Small',
       path: null,
@@ -61,7 +68,7 @@ export const createPyWebViewMock = () => {
     transcriptId: null,
     job,
     models,
-    modelsDirectory: '/Preview/PyWhisper Studio/models',
+    modelsDirectory: '/Preview/Syllentra/models',
     notice: null,
     revision: 0,
     transcriptionFile: null,
@@ -77,13 +84,46 @@ export const createPyWebViewMock = () => {
         'Choose a CTranslate2 model folder with model.bin, config.json and tokenizer.json. OpenAI .pt and whisper.cpp .gguf files are not compatible.',
     },
     preferences: {
-      modelId: scenario === 'ready' ? 'base' : '',
+      modelId: ['ready', 'models'].includes(scenario ?? '') ? 'base' : '',
       interfaceLanguage: 'system',
       language: 'auto',
       localModelPaths: [],
       theme: 'system',
     },
   };
+  if (scenario === 'models') {
+    state.preferences.localModelPaths = [
+      '/Preview/my-model',
+      '/Preview/moved-model',
+    ];
+    state.models.push(
+      {
+        ...models[0],
+        id: 'local:/Preview/my-model',
+        caches: [],
+        description: 'Model linked from your computer.',
+        name: 'My local model',
+        path: '/Preview/my-model',
+        sizeLabel: 'Local folder',
+        sourceUrl: '',
+        isAvailable: true,
+        isRecommended: false,
+      },
+      {
+        ...models[0],
+        id: 'local:/Preview/moved-model',
+        caches: [],
+        name: 'Moved model',
+        path: '/Preview/moved-model',
+        sizeLabel: 'Local folder',
+        sourceUrl: '',
+        description:
+          'Folder missing or incomplete. Choose the model folder again.',
+        isAvailable: false,
+        isRecommended: false,
+      },
+    );
+  }
   let transcript: null | Transcript = null;
   const emit = () => {
     state = structuredClone({ ...state, revision: state.revision + 1 });
@@ -113,6 +153,20 @@ export const createPyWebViewMock = () => {
     };
     if (kind === 'transcription') {
       state.transcriptId = null;
+    } else {
+      state.models = state.models.map((model) =>
+        model.id === modelId && !model.caches.length
+          ? {
+              ...model,
+              caches: [
+                {
+                  directory: `${state.modelsDirectory}/${modelId}`,
+                  isShared: false,
+                },
+              ],
+            }
+          : model,
+      );
     }
     emit();
     let step = 0;
@@ -128,7 +182,7 @@ export const createPyWebViewMock = () => {
       state.job.status = 'running';
       state.job.progress = kind === 'download' ? null : step * 20;
       state.job.remainingSeconds =
-        kind === 'transcription' && step > 1 ? (5 - step) * 0.6 : null;
+        kind === 'transcription' && step >= 4 ? (5 - step) * 0.6 : null;
       state.job.message =
         kind === 'download'
           ? `model.bin · ${step}/5`
@@ -143,7 +197,13 @@ export const createPyWebViewMock = () => {
             model.id === modelId
               ? {
                   ...model,
-                  path: `/Preview/models/${modelId}`,
+                  path: `${state.modelsDirectory}/${modelId}`,
+                  caches: [
+                    {
+                      directory: `${state.modelsDirectory}/${modelId}`,
+                      isShared: false,
+                    },
+                  ],
                   isAvailable: true,
                 }
               : model,
@@ -171,8 +231,14 @@ export const createPyWebViewMock = () => {
             modelId,
             createdAt: new Date().toISOString(),
             duration: 24.5,
+            engineName: 'Preview engine',
             file,
             language: state.preferences.language === 'es' ? 'es' : 'en',
+            modelName:
+              state.models.find((model) => model.id === modelId)?.name ??
+              modelId,
+            processingSeconds:
+              (Date.now() - new Date(state.job.startedAt).getTime()) / 1000,
             segments:
               scenario === 'empty'
                 ? []
@@ -204,6 +270,46 @@ export const createPyWebViewMock = () => {
       emit();
       return Promise.resolve();
     },
+    delete_model: (modelId) => {
+      const deleted = state.models.find((model) => model.id === modelId);
+      if (!deleted?.sourceUrl || !deleted.caches.length) {
+        return Promise.reject(
+          new Error('Choose a downloaded catalog model first.'),
+        );
+      }
+      state.models = state.models.map((model) => {
+        if (model.id === modelId) {
+          return { ...model, caches: [], path: null, isAvailable: false };
+        }
+        if (
+          !model.sourceUrl &&
+          deleted.caches.some(
+            (cache) =>
+              model.path === cache.directory ||
+              model.path?.startsWith(`${cache.directory}/`),
+          )
+        ) {
+          return {
+            ...model,
+            description:
+              'Folder missing or incomplete. Choose the model folder again.',
+            isAvailable: false,
+          };
+        }
+        return model;
+      });
+      if (
+        !state.models.some(
+          (model) =>
+            model.id === state.preferences.modelId && model.isAvailable,
+        )
+      ) {
+        state.preferences.modelId =
+          state.models.find((model) => model.isAvailable)?.id ?? '';
+      }
+      emit();
+      return Promise.resolve();
+    },
     download_model: (modelId) => Promise.resolve(begin('download', modelId)),
     export_transcript: () =>
       Promise.reject(
@@ -229,18 +335,33 @@ export const createPyWebViewMock = () => {
       state.preferences.language = language;
       return Promise.resolve(begin('transcription', modelId));
     },
-    select_model_folder: () => {
+    select_model_folder: (replaceId) => {
+      const previousPath = state.models.find(
+        (item) => item.id === replaceId,
+      )?.path;
       const model = {
         ...models[0],
-        id: 'local:preview',
+        id: 'local:/Preview/local-model',
+        caches: [],
+        description: 'Model linked from your computer.',
         name: 'My local model',
         path: '/Preview/local-model',
+        sizeLabel: 'Local folder',
+        sourceUrl: '',
         isAvailable: true,
         isRecommended: false,
       };
       state.models = [
-        ...state.models.filter((item) => item.id !== model.id),
+        ...state.models.filter(
+          (item) => item.id !== model.id && item.id !== replaceId,
+        ),
         model,
+      ];
+      state.preferences.localModelPaths = [
+        ...state.preferences.localModelPaths.filter(
+          (path) => path !== previousPath && path !== model.path,
+        ),
+        model.path,
       ];
       state.preferences.modelId = model.id;
       emit();
@@ -257,6 +378,18 @@ export const createPyWebViewMock = () => {
     },
     set_preferences: (modelId, language) => {
       state.preferences = { ...state.preferences, modelId, language };
+      emit();
+      return Promise.resolve();
+    },
+    unlink_model: (modelId) => {
+      const path = state.models.find((model) => model.id === modelId)?.path;
+      state.models = state.models.filter((model) => model.id !== modelId);
+      state.preferences.localModelPaths =
+        state.preferences.localModelPaths.filter((item) => item !== path);
+      if (state.preferences.modelId === modelId) {
+        state.preferences.modelId =
+          state.models.find((model) => model.isAvailable)?.id ?? '';
+      }
       emit();
       return Promise.resolve();
     },

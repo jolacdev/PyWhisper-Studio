@@ -71,10 +71,18 @@ class PyWebViewApi:
         """Keep interface preferences separate from the recording's spoken language."""
         self._service.set_appearance(theme, language)
 
-    def select_model_folder(self) -> ModelInfo | None:
-        """Validate and link a native folder chosen by the user."""
+    def select_model_folder(self, replace_id: str | None = None) -> ModelInfo | None:
+        """Link a native folder, optionally replacing an existing external location."""
         result = self._get_window().create_file_dialog(webview.FileDialog.FOLDER)
-        return self._service.import_model(Path(str(result[0]))) if result else None
+        return self._service.import_model(Path(str(result[0])), replace_id) if result else None
+
+    def unlink_model(self, model_id: str) -> None:
+        """Remove an external model reference while leaving its files untouched."""
+        self._service.unlink_model(model_id)
+
+    def delete_model(self, model_id: str) -> None:
+        """Delete downloaded catalog caches after the interface confirms their locations."""
+        self._service.delete_model(model_id)
 
     def refresh_models(self) -> None:
         """Rescan local model locations without using the network."""

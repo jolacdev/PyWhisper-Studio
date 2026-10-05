@@ -5,7 +5,7 @@
 - [x] Local file selection, model setup, progress, cancellation, and distinct terminal states.
 - [x] Local model priority, compatible folder linking, explicit downloads, visible storage location.
 - [x] Engine-neutral service and generated API/state contracts.
-- [x] Read-only text/timestamp views, copy, and native TXT/SRT/VTT export.
+- [x] Timestamped segment view, source/processing details, copy, and native TXT/SRT/VTT export.
 - [x] English / Spain Spanish, system/light/dark themes, shared UI primitives.
 - [x] Persist model and interface preferences; warn before replacing a result.
 - [x] Revalidate moved/deleted inputs on entry and window focus without losing the current transcript.

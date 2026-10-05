@@ -43,8 +43,14 @@ export type ModelInfo = {
   sizeLabel: string;
   sourceUrl: string;
   path: string | null;
+  caches: Array<ModelCache>;
   isAvailable: boolean;
   isRecommended: boolean;
+};
+
+export type ModelCache = {
+  directory: string;
+  isShared: boolean;
 };
 
 export type Preferences = {
@@ -67,7 +73,10 @@ export type Transcript = {
   createdAt: string;
   file: FileMetadata;
   engineId: string;
+  engineName: string;
   modelId: string;
+  modelName: string;
+  processingSeconds: number;
   language: string;
   duration: number;
   segments: Array<TranscriptionSegment>;
@@ -88,6 +97,7 @@ export interface PyWebViewApi {
   bind_dropzone(): Promise<boolean>;
   cancel_job(job_id: string): Promise<void>;
   clear_file(): Promise<void>;
+  delete_model(model_id: string): Promise<void>;
   download_model(model_id: string): Promise<Job>;
   export_transcript(job_id: string, format: "txt" | "srt" | "vtt"): Promise<string | null>;
   get_state(): Promise<AppState>;
@@ -97,9 +107,10 @@ export interface PyWebViewApi {
   refresh_file(): Promise<FileMetadata | null>;
   refresh_models(): Promise<void>;
   run_transcription(file_path: string, model_name: string, language?: string): Promise<Job>;
-  select_model_folder(): Promise<ModelInfo | null>;
+  select_model_folder(replace_id?: string | null): Promise<ModelInfo | null>;
   set_appearance(theme: "system" | "light" | "dark", language: "system" | "en" | "es-ES"): Promise<void>;
   set_preferences(model_id: string, language: string): Promise<void>;
+  unlink_model(model_id: string): Promise<void>;
 }
 
 export type PyWebViewApiType = PyWebViewApi;

@@ -31,18 +31,16 @@ const PyWebViewProvider = ({ children }: { children: ReactNode }) => {
     <main className="grid min-h-screen place-items-center p-8">
       <div className="max-w-md text-center">
         <Icon className="text-accent mx-auto mb-6 size-10" name="waveform" />
-        <h1 className="text-xl font-semibold">
-          {t('Connecting to the desktop app…')}
-        </h1>
+        <h1 className="text-xl font-semibold">{t('startup.connecting')}</h1>
         <p className="text-ink/70 mt-3 text-sm">
-          {t('Open PyWhisper Studio to use local files and models.')}
+          {t('startup.desktopRequired')}
         </p>
         {import.meta.env.DEV && (
           <a
             className="text-accent mt-6 inline-block text-sm underline"
             href="?preview"
           >
-            {t('Open interface preview')}
+            {t('startup.openPreview')}
           </a>
         )}
       </div>

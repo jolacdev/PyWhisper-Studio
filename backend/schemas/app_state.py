@@ -10,6 +10,13 @@ Theme = Literal["system", "light", "dark"]
 InterfaceLanguage = Literal["system", "en", "es-ES"]
 
 
+class ModelCache(TypedDict):
+    """Identify downloaded files and whether other applications share their storage."""
+
+    directory: str
+    isShared: bool
+
+
 class ModelInfo(TypedDict):
     """Describe a model without exposing engine-specific objects to React."""
 
@@ -19,6 +26,7 @@ class ModelInfo(TypedDict):
     sizeLabel: str
     sourceUrl: str
     path: str | None
+    caches: list[ModelCache]
     isAvailable: bool
     isRecommended: bool
 
@@ -70,7 +78,10 @@ class Transcript(TypedDict):
     createdAt: str
     file: FileMetadata
     engineId: str
+    engineName: str
     modelId: str
+    modelName: str
+    processingSeconds: float
     language: str
     duration: float
     segments: list[TranscriptionSegment]

@@ -1,7 +1,7 @@
 {
-  "name": "whisper-gui",
+  "name": "syllentra",
   "version": "0.0.0",
-  "description": "",
+  "description": "Local speech transcription for your desktop.",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "initialize": "pnpm install && pnpm --dir frontend install && node scripts/python.mjs initialize",

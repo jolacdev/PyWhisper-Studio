@@ -8,11 +8,13 @@ type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
 
 /** Keep native selection behavior with the same sizing and surfaces as buttons. */
 const Select = ({ children, className = '', ...props }: SelectProps) => (
-  <div className={cn('relative min-w-0', className)}>
+  <div
+    className={cn('relative min-w-0 rounded-xl focus-within:z-10', className)}
+  >
     <select
       className={cn(
         'border-ink/12 bg-surface text-ink h-10 w-full appearance-none rounded-xl border pr-9 pl-3',
-        'hover:border-ink/30 text-sm shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-45',
+        'hover:border-ink/30 text-sm shadow-xs transition-colors focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-45',
       )}
       {...props}
     >

@@ -4,7 +4,7 @@ import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, copy_metadata
 
 ROOT = Path(SPECPATH).parent
-APP_NAME = "PyWhisper Studio"
+APP_NAME = "Syllentra"
 icon = Path(SPECPATH) / ("logo.icns" if sys.platform == "darwin" else "logo.ico")
 
 # VAD needs its packaged ONNX model even when speech models are stored outside the app.
@@ -42,6 +42,6 @@ if sys.platform == "darwin":
         collection,
         name=f"{APP_NAME}.app",
         # Set the final release identity when configuring signing and notarization.
-        bundle_identifier="com.example.whisper_gui",
+        bundle_identifier="com.jolacdev.syllentra",
         icon=str(icon) if icon.exists() else None,
     )

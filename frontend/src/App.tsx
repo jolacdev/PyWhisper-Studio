@@ -6,7 +6,6 @@ import Button from '@components/Button';
 import { JobProgress, Notice, Notifications } from '@components/Feedback';
 import Icon from '@components/Icon';
 import Select from '@components/Select';
-import Typography from '@components/Typography';
 import { useTranscription } from '@features/transcription/useTranscription';
 import FileSelectionScreen from '@screens/FileSelectionScreen';
 import FileTranscriptionScreen from '@screens/FileTranscriptionScreen';
@@ -14,6 +13,8 @@ import ModelsScreen from '@screens/ModelsScreen';
 import { cn } from '@utils/cn';
 import type { IconName } from '@components/Icon';
 import type { Preferences } from 'types/pywebview/pywebview-api';
+
+import { messageKey } from './i18n/legacyMessages';
 
 type Page = 'models' | 'new' | 'transcript';
 type Theme = Preferences['theme'];
@@ -78,19 +79,23 @@ const App = () => {
   }, [page, setError]);
   useEffect(() => {
     if (error) {
-      toast.error(t(error), { id: 'command-error' });
+      toast.error(t(messageKey(error)), { id: 'command-error' });
     } else {
       toast.dismiss('command-error');
     }
-  }, [error, t]);
+    // The same error should not reopen when only the interface language changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error]);
   const notice = state?.notice;
   useEffect(() => {
     if (notice) {
-      toast.error(t(notice), { id: 'file-notice' });
+      toast.error(t(messageKey(notice)), { id: 'file-notice' });
     } else {
       toast.dismiss('file-notice');
     }
-  }, [notice, t]);
+    // Keep notices tied to backend changes, not translation rerenders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notice]);
   const {
     id: jobId,
     error: jobError,
@@ -107,42 +112,46 @@ const App = () => {
           <p className="font-semibold">
             {t(
               jobKind === 'download'
-                ? 'The model could not be downloaded.'
-                : 'The file could not be transcribed.',
+                ? 'errors.downloadFailed'
+                : 'errors.transcriptionFailed',
             )}
           </p>
           <p>
             {t(
               jobKind === 'download'
-                ? 'Check your connection and free disk space, then try again.'
-                : 'Check the recording and model, then try again.',
+                ? 'errors.checkDownload'
+                : 'errors.checkRecording',
             )}
           </p>
           <details className="text-xs">
             <summary className="cursor-pointer">
-              {t('Technical details')}
+              {t('errors.technicalDetails')}
             </summary>
             <p className="mt-2 max-h-40 overflow-auto break-words whitespace-pre-wrap">
-              {t(jobError || '')}
+              {t(messageKey(jobError || ''))}
             </p>
           </details>
         </div>,
         { id: `job-${jobId}` },
       );
     } else if (jobStatus === 'cancelled') {
-      toast(t('Task cancelled.'), { id: `job-${jobId}` });
+      toast(t('progress.cancelled'), { id: `job-${jobId}` });
     } else if (jobStatus === 'completed' && jobKind === 'download') {
-      toast.success(t('Model downloaded. Ready to transcribe offline.'), {
+      toast.success(t('models.downloadComplete'), {
         id: `job-${jobId}`,
       });
     }
-  }, [jobId, jobStatus, jobError, jobKind, t]);
+    // A job notification belongs to a status transition, not a locale change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId, jobStatus, jobError, jobKind]);
 
   if (!state) {
     return (
       <main className="mx-auto max-w-lg p-12">
         <Notifications />
-        <p role="status">{t(error || 'Opening your workspace…')}</p>
+        <p role="status">
+          {error ? t(messageKey(error)) : t('startup.opening')}
+        </p>
       </main>
     );
   }
@@ -162,14 +171,7 @@ const App = () => {
     if (!file || !selectedModel) {
       return;
     }
-    if (
-      transcript &&
-      !window.confirm(
-        t(
-          'Starting a new transcription will replace this result. Have you exported anything you want to keep?',
-        ),
-      )
-    ) {
+    if (transcript && !window.confirm(t('transcript.replaceConfirm'))) {
       return;
     }
     toast.dismiss();
@@ -182,9 +184,13 @@ const App = () => {
     );
   };
   const navItems: { id: Page; icon: IconName; label: string }[] = [
-    { id: 'new', icon: 'plus', label: t('New transcription') },
-    { id: 'transcript', icon: 'file-document-outline', label: t('Transcript') },
-    { id: 'models', icon: 'layers-outline', label: t('Models') },
+    { id: 'new', icon: 'plus', label: t('file.title') },
+    {
+      id: 'transcript',
+      icon: 'file-document-outline',
+      label: t('transcript.title'),
+    },
+    { id: 'models', icon: 'layers-outline', label: t('models.title') },
   ];
   const isPreview =
     import.meta.env.DEV && new URLSearchParams(location.search).has('preview');
@@ -195,7 +201,7 @@ const App = () => {
         className="bg-surface sr-only z-50 rounded-xl p-3 focus:not-sr-only focus:fixed focus:top-4 focus:left-4"
         href="#workspace"
       >
-        {t('Skip to content')}
+        {t('app.skipContent')}
       </a>
       <aside
         className={cn(
@@ -204,18 +210,13 @@ const App = () => {
         )}
       >
         <div className="flex items-center gap-3 px-2">
-          <div className="bg-accent text-canvas grid size-9 place-items-center rounded-xl">
-            <Icon name="waveform" />
-          </div>
-          <div className="text-sm leading-5 font-semibold">
-            PyWhisper
-            <span className="text-ink/70 block text-xs font-normal">
-              Studio
-            </span>
+          <img alt="" className="size-9 rounded-xl" src="/logo.svg" />
+          <div className="text-lg font-semibold tracking-tight">
+            {t('app.name')}
           </div>
         </div>
         <nav
-          aria-label={t('Workspace navigation')}
+          aria-label={t('app.navigation')}
           className="flex gap-1 sm:flex-col"
         >
           {navItems
@@ -238,32 +239,27 @@ const App = () => {
               </button>
             ))}
         </nav>
-        <button
-          className={cn(
-            'border-ink/12 hover:bg-ink/5 hidden items-center gap-3 rounded-xl border p-3 text-left',
-            'transition-colors sm:flex',
-          )}
-          type="button"
-          onClick={() => navigate('models')}
-        >
+        <div className="border-ink/12 flex items-center gap-3 border-t px-3 pt-4">
           <Icon className="text-ink/60 size-4 shrink-0" name="layers-outline" />
           <span className="min-w-0 flex-1">
             <span className="text-ink/70 block text-xs">
-              {t('Selected model')}
+              {t('app.selectedModel')}
             </span>
-            <span className="mt-1 block truncate text-sm font-medium">
-              {selectedModel?.name ?? t('Set up a model')}
+            <span
+              className="mt-1 block truncate text-sm font-medium"
+              title={selectedModel?.name}
+            >
+              {selectedModel?.name ?? t('models.noneSelected')}
             </span>
           </span>
-          <Icon className="text-ink/60 size-4" name="chevron-right" />
-        </button>
+        </div>
         <div className="mt-auto space-y-4">
           <div>
             <label
               className="text-ink/70 mb-2 block text-xs"
               htmlFor="ui-language"
             >
-              {t('Interface language')}
+              {t('app.interfaceLanguage')}
             </label>
             <Select
               disabled={isPending}
@@ -280,19 +276,19 @@ const App = () => {
             </Select>
           </div>
           <div>
-            <p className="text-ink/70 mb-2 text-xs">{t('Appearance')}</p>
+            <p className="text-ink/70 mb-2 text-xs">{t('app.appearance')}</p>
             <div
-              aria-label={t('Appearance')}
+              aria-label={t('app.appearance')}
               className="border-ink/12 grid grid-cols-3 gap-1 rounded-xl border p-1"
               role="group"
             >
               {(Object.keys(themeIcons) as Theme[]).map((mode) => (
                 <button
                   key={mode}
-                  aria-label={t(mode)}
+                  aria-label={t(`app.${mode}`)}
                   aria-pressed={theme === mode}
                   className={cn(
-                    'flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[11px] transition-colors',
+                    'flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[11px] transition-colors focus-visible:z-10',
                     theme === mode
                       ? 'bg-surface text-ink shadow-xs'
                       : 'text-ink/70 hover:bg-ink/5 hover:text-ink',
@@ -309,14 +305,14 @@ const App = () => {
                   }
                 >
                   <Icon className="size-4" name={themeIcons[mode]} />
-                  {t(mode)}
+                  {t(`app.${mode}`)}
                 </button>
               ))}
             </div>
           </div>
           <p className="border-ink/12 text-ink/70 flex items-center justify-center gap-2 border-t pt-4 text-xs">
             <Icon className="size-4" name="shield-check-outline" />
-            {t('Private by design')}
+            {t('app.private')}
           </p>
         </div>
       </aside>
@@ -331,16 +327,19 @@ const App = () => {
             page === 'transcript' && 'h-full',
           )}
         >
-          {isPreview && (
-            <Notice>
-              {t(
-                'Interface preview — files, downloads and results are simulated.',
-              )}
-            </Notice>
-          )}
+          {isPreview && <Notice>{t('app.previewNotice')}</Notice>}
           {isBusy && (
             <JobProgress
+              file={
+                state.job.kind === 'transcription'
+                  ? state.transcriptionFile
+                  : null
+              }
               job={state.job}
+              modelName={
+                state.models.find((model) => model.id === state.job.modelId)
+                  ?.name ?? state.job.modelId
+              }
               onCancel={() => act(() => api.cancel_job(state.job.id))}
             />
           )}
@@ -349,32 +348,25 @@ const App = () => {
               isDisabled={isDisabled}
               state={state}
               onContinue={() => navigate('new')}
+              onDelete={(id) =>
+                act(async () => {
+                  await api.delete_model(id);
+                  toast.success(t('models.deleteComplete'));
+                })
+              }
               onDownload={(id) => act(() => api.download_model(id))}
               onImport={() => act(() => api.select_model_folder())}
               onOpenFolder={() => act(() => api.open_models_folder())}
               onRefresh={() => act(() => api.refresh_models())}
+              onRelink={(id) => act(() => api.select_model_folder(id))}
               onSelect={(id) =>
                 act(() => api.set_preferences(id, state.preferences.language))
               }
+              onUnlink={(id) => act(() => api.unlink_model(id))}
             />
           )}
           {page === 'new' &&
-            (isBusy && state.job.kind === 'transcription' ? (
-              <section className="border-ink/12 bg-surface rounded-2xl border p-8">
-                <Typography variant="title">
-                  {t('Transcribing file')}
-                </Typography>
-                <p
-                  className="text-ink/70 mt-3 truncate text-sm"
-                  title={state.transcriptionFile?.name}
-                >
-                  {state.transcriptionFile?.name}
-                </p>
-                <Typography className="mt-3" variant="caption">
-                  {t('Longer recordings and larger models take more time.')}
-                </Typography>
-              </section>
-            ) : (
+            !(isBusy && state.job.kind === 'transcription') && (
               <FileSelectionScreen
                 isDisabled={isDisabled}
                 state={state}
@@ -386,19 +378,21 @@ const App = () => {
                 }
                 onTranscribe={startTranscription}
               />
-            ))}
+            )}
           {page === 'transcript' && transcript && (
             <FileTranscriptionScreen
               isDisabled={isDisabled}
               transcript={transcript}
-              onCopy={(text) =>
-                act(async () => {
+              onCopy={async (text) => {
+                try {
                   await navigator.clipboard.writeText(text);
-                  toast.success(t('Text copied to the clipboard.'), {
-                    id: 'clipboard',
-                  });
-                })
-              }
+                } catch (reason) {
+                  setError(
+                    reason instanceof Error ? reason.message : String(reason),
+                  );
+                  throw reason;
+                }
+              }}
               onExport={(format) =>
                 act(async () => {
                   const path = await api.export_transcript(
@@ -406,16 +400,15 @@ const App = () => {
                     format,
                   );
                   if (path) {
-                    toast.success(t('Saved to {{path}}', { path }));
+                    toast.success(t('transcript.savedTo', { path }));
                   }
                 })
               }
-              onNew={() => navigate('new')}
             />
           )}
           {page === 'transcript' && !transcript && (
             <Button onClick={() => navigate('new')}>
-              {t('Back to transcription')}
+              {t('common.backToTranscription')}
             </Button>
           )}
         </div>

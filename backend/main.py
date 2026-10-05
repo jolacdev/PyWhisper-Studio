@@ -1,10 +1,8 @@
 import logging
 import multiprocessing
 import os
-from pathlib import Path
 
 import webview
-from platformdirs import user_data_dir
 
 from api.api import PyWebViewApi
 from constants import APP_NAME, ENABLE_BUNDLED_LOGGING, LOGGING_FILENAME
@@ -12,13 +10,14 @@ from helpers.logging_helpers import setup_logging
 from helpers.webview_helpers import configure_native_window, get_frontend_entrypoint, is_running_bundled
 from service.transcription_service import TranscriptionService
 from service.whisper_service import FasterWhisperEngine
+from utils.storage_utils import get_data_directory
 
 if __name__ == "__main__":
     # Frozen subprocesses must return before creating another desktop window.
     multiprocessing.freeze_support()
     is_bundled = is_running_bundled()
     setup_logging(APP_NAME, LOGGING_FILENAME, not is_bundled or ENABLE_BUNDLED_LOGGING, logging.INFO)
-    directory = Path(os.environ.get("PYWHISPER_DATA_DIR", user_data_dir(APP_NAME)))
+    directory = get_data_directory()
     # Swap this adapter to change engines; the service and bridge stay the same.
     service = TranscriptionService(FasterWhisperEngine(), directory)
     api = PyWebViewApi(service)

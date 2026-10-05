@@ -13,3 +13,14 @@ declare module 'vitest' {
 
 // NOTE: Extends the `expect` function from Vitest to add the matchers of Jest-DOM. Allowing the use of matchers like `.toBeInTheDocument()`.
 expect.extend(matchers);
+
+// JSDOM has no native dialog implementation; browser focus trapping is outside DOM unit tests.
+/** Represent native modal visibility for confirmation tests. */
+HTMLDialogElement.prototype.showModal = function showModal() {
+  this.open = true;
+};
+
+/** Represent native dialog dismissal without simulating browser focus behavior. */
+HTMLDialogElement.prototype.close = function close() {
+  this.open = false;
+};

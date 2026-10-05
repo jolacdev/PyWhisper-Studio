@@ -2,7 +2,7 @@
 
 > **Last Updated:** 07-12-2025
 
-This document contains development notes, design considerations, and implementation ideas for the PyWhisper Studio project.
+This document contains development notes, design considerations, and implementation ideas for Syllentra.
 
 ---
 

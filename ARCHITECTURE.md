@@ -14,23 +14,25 @@
 - `window.pywebview.api` exposes promise-based commands after `pywebviewready`.
 - Python owns `window.state.app`. React subscribes before requesting `get_state()` and ignores older revisions; it never writes shared state.
 - `schemas/app_state.py`, `TranscriptionService`, and `useTranscription` use domain names independent of product branding. Renaming code does not move existing user data.
-- `run_transcription` returns a `Job` immediately. A worker publishes progress at most four times per second, plus phase changes. Full segments travel once through `get_transcript`.
+- `run_transcription` returns a `Job` immediately. A worker publishes every advancing segment and phase change; repeated progress is limited to four updates per second. Full segments travel once through `get_transcript`.
 - One lock serializes state changes and job admission because pywebview invokes API methods on separate threads. Cancellation targets a job ID and takes effect between native operations.
-- `remainingSeconds` estimates time from measured progress after two advancing samples; loading/decoding are excluded. Unknown and terminal estimates are `None`.
+- `remainingSeconds` uses average inference speed after at least four advancing segments, five seconds of inference, and 0.5 percentage points of progress. The engine establishes a zero-progress baseline before consuming its lazy segment generator, excluding loading/decoding while including the first inference block. Unknown and terminal estimates are `None`.
+- Completed transcripts retain model/engine names and measured `processingSeconds` alongside file size and recording duration. Processing time includes model loading, audio preparation, and inference; it uses a monotonic clock and stays tied to that result when preferences change.
 - `pnpm gen-api` generates API methods, DTOs, and shared state from Python annotations. `pnpm check-api` detects drift. Unsupported annotations fail generation; no `any` fallback.
 - Browser simulation requires development mode and `?preview`; production always uses the native bridge.
 
 ## Models and persistence
 
-- Discover valid local app/Hub caches first. A native folder picker links external models without copying them.
+- Discover valid local app/Hub caches first. A native folder picker links external models without copying them. Linked folders appear separately from the model catalog; missing locations can be relinked in place, and links can be removed without deleting files. Removing the selected link chooses an available model or clears the selection.
 - Downloads happen only through `download_model`. Inference receives a validated local directory with its tokenizer; it never downloads assets.
-- JSON preferences persist model paths, selected model, spoken language, interface language, and appearance. The OS app-data directory owns this file and the managed model cache; `PYWHISPER_DATA_DIR` overrides it for isolated runs.
+- `ModelInfo.caches` describes per-model app and shared Hub repositories for the deletion confirmation. `delete_model` runs only while idle, releases loaded weights before file removal, and removes only the confirmed catalog repositories using Hub cache cleanup. External links retain their files; cache copies that appear after confirmation require a refresh. Discovery and selection are refreshed even after partial deletion failure.
+- JSON preferences persist model paths, selected model, spoken language, interface language, and appearance. `APP_NAME` is Syllentra, while `APP_DATA_NAME` retains the PyWhisper Studio OS data identity to preserve installations. `SYLLENTRA_DATA_DIR` overrides storage for isolated runs; `PYWHISPER_DATA_DIR` remains a fallback.
 - One transcript stays in memory until replaced or the app closes. TXT/SRT/VTT exports use native save dialogs. History and editing remain deferred.
 - Entering New transcription or refocusing that screen revalidates the selected path. Missing files clear only the input; completed transcripts remain available.
 
 ## Replacing the engine
 
-1. Implement `TranscriptionEngine`: capability metadata, local discovery/validation, explicit download, and transcription.
+1. Implement `TranscriptionEngine`: capability metadata, local discovery/validation, explicit download and cache deletion, and transcription.
 2. Return `ModelInfo` and `EngineResult`; translate vendor output into timed `TranscriptionSegment` objects. Keep network/cache details inside the adapter.
 3. Check cancellation between supported operations and report real progress, or `None` when unknown.
 4. Inject the adapter in `main.py`; adjust dependencies and packaging assets. Add its explanatory copy to both locales.

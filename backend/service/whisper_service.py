@@ -1,16 +1,19 @@
 import json
+from dataclasses import replace
 from fnmatch import fnmatch
 from pathlib import Path
+from shutil import rmtree
 from threading import Event
 
 import ctranslate2
 from faster_whisper import WhisperModel
 from faster_whisper.tokenizer import _LANGUAGE_CODES
-from huggingface_hub import HfApi, hf_hub_download, snapshot_download
+from huggingface_hub import HfApi, hf_hub_download, scan_cache_dir, snapshot_download
+from huggingface_hub.constants import HF_HUB_CACHE
 from huggingface_hub.errors import LocalEntryNotFoundError
 from tokenizers import Tokenizer
 
-from schemas.app_state import EngineInfo, ModelInfo
+from schemas.app_state import EngineInfo, ModelCache, ModelInfo
 from schemas.transcription import TranscriptionSegment
 from service.engine import CancelledError, EngineResult, ProgressCallback
 
@@ -106,7 +109,7 @@ class FasterWhisperEngine:
         models: list[ModelInfo] = []
         for model_id, name, description, size, repo in MODEL_CATALOG:
             model_path = None
-            for cache in (str(directory), None):
+            for cache in (str(directory), HF_HUB_CACHE):
                 try:
                     candidate = str(
                         snapshot_download(
@@ -126,6 +129,7 @@ class FasterWhisperEngine:
                     "sizeLabel": size,
                     "sourceUrl": f"https://huggingface.co/{repo}",
                     "path": model_path,
+                    "caches": self._model_caches(directory, repo),
                     "isAvailable": model_path is not None,
                     "isRecommended": model_id == "base",
                 }
@@ -150,6 +154,7 @@ class FasterWhisperEngine:
             "sizeLabel": "Local folder",
             "sourceUrl": "",
             "path": path,
+            "caches": [],
             "isAvailable": True,
             "isRecommended": False,
         }
@@ -158,6 +163,52 @@ class FasterWhisperEngine:
         """Validate the selected folder before making it available to the UI."""
         validate_model(directory)
         return self._local_model(directory)
+
+    def _model_caches(self, directory: Path, repo: str) -> list[ModelCache]:
+        """Expose only this catalog repository's app and shared cache folders."""
+        caches: list[ModelCache] = []
+        shared_root = Path(HF_HUB_CACHE).expanduser().resolve()
+        roots = dict.fromkeys((directory.resolve(), shared_root))
+        for root in roots:
+            target = root / f"models--{repo.replace('/', '--')}"
+            if target.is_dir() and not target.is_symlink():
+                caches.append({"directory": str(target), "isShared": root == shared_root})
+        return caches
+
+    def delete_model(self, model: ModelInfo, directory: Path) -> None:
+        """Delete confirmed catalog caches, keeping unrelated repositories and external folders intact."""
+        repo = next((entry[4] for entry in MODEL_CATALOG if entry[0] == model["id"]), None)
+        if repo is None or not model["sourceUrl"] or not model["caches"]:
+            raise ValueError("Choose a downloaded catalog model first.")
+        caches = self._model_caches(directory, repo)
+        # Do not erase a new cache copy that appeared after the user reviewed the confirmation.
+        if caches != model["caches"]:
+            raise ValueError("The model storage changed. Refresh models and try again.")
+        targets = [Path(cache["directory"]) for cache in caches]
+        for target in targets:
+            if target.is_symlink() or target.resolve().parent != target.parent:
+                raise ValueError("The model storage changed. Refresh models and try again.")
+        if self._model_path and any(Path(self._model_path).resolve().is_relative_to(p) for p in targets):
+            # Release native weight handles before deleting their files, including on Windows.
+            self._model = None
+            self._model_path = None
+        try:
+            for target in targets:
+                cache_info = scan_cache_dir(target.parent)
+                cached_repo = next((item for item in cache_info.repos if item.repo_path == target), None)
+                if cached_repo and cached_repo.revisions:
+                    # Restrict revision matching to this repository, even if another shares a commit hash.
+                    scoped = replace(cache_info, repos=frozenset({cached_repo}))
+                    scoped.delete_revisions(*(rev.commit_hash for rev in cached_repo.revisions)).execute()
+                else:
+                    # Incomplete downloads have no valid revision but still contain large partial files.
+                    rmtree(target)
+                if target.exists():
+                    raise OSError("Cached model folder still exists")
+        except OSError as error:
+            raise ValueError(
+                "The model files could not be deleted. Check folder permissions and try again."
+            ) from error
 
     def download_model(self, model_id: str, directory: Path, cancel: Event, report: ProgressCallback) -> None:
         """Download only model assets, preserving Hub caching and resumable partial files."""
@@ -206,6 +257,8 @@ class FasterWhisperEngine:
             vad_filter=True,
         )
         segments: list[TranscriptionSegment] = []
+        # Establish the inference clock before consuming the lazy segment generator.
+        report(0.0 if info.duration > 0 else None, "Transcribing on your computer…")
         iterator = iter(raw_segments)
         while True:
             check_cancelled(cancel)

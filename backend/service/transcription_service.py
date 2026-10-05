@@ -25,6 +25,9 @@ from utils.media_utils import get_file_metadata_from_path, is_media_file
 logger = logging.getLogger(__name__)
 ACTIVE_STATUSES = {"loading", "running", "cancelling"}
 PROGRESS_INTERVAL_SECONDS = 0.25
+ESTIMATE_MIN_SEGMENTS = 4
+ESTIMATE_MIN_SECONDS = 5.0
+ESTIMATE_MIN_PROGRESS = 0.5
 
 
 def empty_job() -> Job:
@@ -57,6 +60,8 @@ class TranscriptionService:
         self._result: Transcript | None = None
         self._last_report = 0.0
         self._progress_origin: tuple[float, float] | None = None
+        self._progress_samples = 0
+        self._last_progress = 0.0
         preferences, notice = self._read_preferences()
         models = engine.list_models(self.models_directory, preferences["localModelPaths"])
         if not any(m["id"] == preferences["modelId"] and m["isAvailable"] for m in models):
@@ -205,13 +210,24 @@ class TranscriptionService:
             self._save_preferences()
             self._publish()
 
-    def import_model(self, directory: Path) -> ModelInfo:
-        """Link an existing model folder and select it without copying files."""
+    def _linked_model_path(self, model_id: str) -> str:
+        """Restrict link management to folders the user has explicitly registered."""
+        model = self._find_model(model_id)
+        path = model["path"]
+        if model["sourceUrl"] or path is None or path not in self._state["preferences"]["localModelPaths"]:
+            raise ValueError("Choose a linked model first.")
+        return path
+
+    def import_model(self, directory: Path, replace_id: str | None = None) -> ModelInfo:
+        """Link or relocate an external model without copying files or retaining stale entries."""
         with self._lock:
             self._require_idle()
+            previous_path = self._linked_model_path(replace_id) if replace_id is not None else None
             model = self.engine.import_model(directory)
             paths = self._state["preferences"]["localModelPaths"]
             path = str(directory.resolve())
+            if previous_path is not None:
+                paths.remove(previous_path)
             if path not in paths:
                 paths.append(path)
             self._state["preferences"]["modelId"] = model["id"]
@@ -219,6 +235,40 @@ class TranscriptionService:
             self._refresh_models()
             self._publish()
             return model
+
+    def unlink_model(self, model_id: str) -> None:
+        """Forget a linked folder and choose an available fallback without deleting files."""
+        with self._lock:
+            self._require_idle()
+            path = self._linked_model_path(model_id)
+            preferences = self._state["preferences"]
+            preferences["localModelPaths"].remove(path)
+            self._refresh_models()
+            self._ensure_selected_model()
+            self._save_preferences()
+            self._publish()
+
+    def _ensure_selected_model(self) -> None:
+        """Keep selection usable after a model or its linked cache disappears."""
+        preferences = self._state["preferences"]
+        models = self._state["models"]
+        if not any(model["id"] == preferences["modelId"] and model["isAvailable"] for model in models):
+            preferences["modelId"] = next((model["id"] for model in models if model["isAvailable"]), "")
+
+    def delete_model(self, model_id: str) -> None:
+        """Remove downloaded catalog files only while idle and refresh even after partial failure."""
+        with self._lock:
+            self._require_idle()
+            model = self._find_model(model_id)
+            if not model["sourceUrl"] or not model["caches"]:
+                raise ValueError("Choose a downloaded catalog model first.")
+            try:
+                self.engine.delete_model(model, self.models_directory)
+            finally:
+                self._refresh_models()
+                self._ensure_selected_model()
+                self._save_preferences()
+                self._publish()
 
     def _refresh_models(self) -> None:
         """Refresh local availability only when discovery can have changed."""
@@ -257,6 +307,8 @@ class TranscriptionService:
             self._cancel.clear()
             self._last_report = 0
             self._progress_origin = None
+            self._progress_samples = 0
+            self._last_progress = 0.0
             job: Job = {
                 "id": uuid4().hex,
                 "kind": kind,
@@ -281,7 +333,11 @@ class TranscriptionService:
             if self._cancel.is_set():
                 raise CancelledError
             now = monotonic()
-            if now - self._last_report < PROGRESS_INTERVAL_SECONDS and job["message"] == message:
+            if (
+                now - self._last_report < PROGRESS_INTERVAL_SECONDS
+                and job["message"] == message
+                and job["progress"] == progress
+            ):
                 return
             self._last_report = now
             remaining = None
@@ -289,15 +345,26 @@ class TranscriptionService:
                 if self._progress_origin is None:
                     self._progress_origin = (now, progress)
                 start_time, start_progress = self._progress_origin
-                # Estimate from measured inference progress, excluding model loading and audio decoding.
-                if progress > start_progress:
+                if progress > self._last_progress:
+                    self._progress_samples += 1
+                    self._last_progress = progress
+                # Combine sample count, elapsed inference time and coverage; percentages alone
+                # would delay long recordings, while segment counts alone can arrive in a burst.
+                if (
+                    self._progress_samples >= ESTIMATE_MIN_SEGMENTS
+                    and now - start_time >= ESTIMATE_MIN_SECONDS
+                    and progress - start_progress >= ESTIMATE_MIN_PROGRESS
+                ):
                     remaining = max(0.0, (100 - progress) * (now - start_time) / (progress - start_progress))
-            job.update(status="running", progress=progress, remainingSeconds=remaining, message=message)
+            job.update(
+                {"status": "running", "progress": progress, "remainingSeconds": remaining, "message": message}
+            )
             self._publish()
 
     def _run(self, job: Job, model: ModelInfo, file: FileMetadata | None, language: str) -> None:
         """Finalize every worker path exactly once, including empty speech and cancellation."""
         result: Transcript | None = None
+        started = monotonic()
         try:
             if job["kind"] == "download":
                 self.engine.download_model(model["id"], self.models_directory, self._cancel, self._report)
@@ -313,7 +380,10 @@ class TranscriptionService:
                     "createdAt": datetime.now(UTC).isoformat(),
                     "file": file,
                     "engineId": self.engine.info["id"],
+                    "engineName": self.engine.info["name"],
                     "modelId": model["id"],
+                    "modelName": model["name"],
+                    "processingSeconds": monotonic() - started,
                     **output,
                 }
             with self._lock:
@@ -326,19 +396,31 @@ class TranscriptionService:
                 else:
                     self._result = result
                     self._state["transcriptId"] = job["id"]
-                self._state["job"].update(status="completed", progress=100, remainingSeconds=None, message="")
+                self._state["job"].update(
+                    {"status": "completed", "progress": 100, "remainingSeconds": None, "message": ""}
+                )
                 self._publish()
         except CancelledError:
             with self._lock:
+                if job["kind"] == "download":
+                    self._refresh_models()
                 self._state["job"].update(
-                    status="cancelled", progress=None, remainingSeconds=None, message=""
+                    {"status": "cancelled", "progress": None, "remainingSeconds": None, "message": ""}
                 )
                 self._publish()
         except Exception as error:
             logger.exception("%s failed", job["kind"])
             with self._lock:
+                if job["kind"] == "download":
+                    self._refresh_models()
                 self._state["job"].update(
-                    status="error", progress=None, remainingSeconds=None, message="", error=str(error)
+                    {
+                        "status": "error",
+                        "progress": None,
+                        "remainingSeconds": None,
+                        "message": "",
+                        "error": str(error),
+                    }
                 )
                 self._publish()
 

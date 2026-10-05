@@ -91,6 +91,14 @@
     background-position: -200% 0;
   }
 }
+@keyframes copy-pop {
+  50% {
+    transform: scale(1.3);
+  }
+}
+.copy-confirmation svg {
+  animation: copy-pop 220ms ease-out;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

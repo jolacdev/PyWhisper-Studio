@@ -7,13 +7,12 @@ import es from './locales/es.json';
 const language = navigator.language.startsWith('es') ? 'es-ES' : 'en';
 document.documentElement.lang = language;
 
-// English source phrases keep small UI copy changes close to their components.
+// Scoped camelCase keys keep wording independent from component logic.
 i18n
   .use(initReactI18next)
   .init({
     fallbackLng: 'en',
     interpolation: { escapeValue: false },
-    keySeparator: false,
     lng: language,
     nsSeparator: false,
     resources: { en: { translation: en }, 'es-ES': { translation: es } },
